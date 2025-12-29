@@ -41,11 +41,65 @@ function mostrarSeccion(id) {
 
   if (id === "admin-almacen") cargarAdminMateriales();
   if (id === "movimientos") cargarMovimientosGlobal();
+  if (id === "usuarios") cargarUsuarios();
 }
 
 document.querySelectorAll(".nav-btn").forEach(btn => {
   btn.addEventListener("click", () => mostrarSeccion(btn.dataset.section));
 });
+/* ==================== USUARIOS ==================== */
+
+async function cargarUsuarios() {
+  const res = await apiFetch(`${API_BASE}/users`);
+  const data = await res.json();
+
+  const tbody = document.querySelector("#tabla-usuarios tbody");
+  tbody.innerHTML = "";
+
+  if (!data.ok) {
+    alert(data.message || "No se pudo cargar usuarios");
+    return;
+  }
+
+  data.usuarios.forEach(u => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${u.nombre}</td>
+      <td>${u.email}</td>
+      <td>${u.rol}</td>
+      <td>${u.activo ? "Sí" : "No"}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById("form-usuario")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+
+  const payload = {
+    nombre: form.nombre.value.trim(),
+    email: form.email.value.trim(),
+    password: form.password.value,
+    rol: form.rol.value
+  };
+
+  const res = await apiFetch(`${API_BASE}/users`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+
+  if (data.ok) {
+    alert("Usuario creado");
+    form.reset();
+    cargarUsuarios();
+  } else {
+    alert(data.message || "Error al crear usuario");
+  }
+});
+
 
 /* ==================== MATERIALES ==================== */
 
