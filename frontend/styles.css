@@ -378,3 +378,14 @@ button {
   background: var(--border);
   margin: 14px 0;
 }
+
+/* Botón salir en header */
+.main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-logout {
+  margin-left: auto;
+}

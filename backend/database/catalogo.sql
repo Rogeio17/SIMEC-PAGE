@@ -1,4 +1,3 @@
-
 CREATE TABLE materiales (
     id INT AUTO_INCREMENT PRIMARY KEY,
     codigo VARCHAR(50) UNIQUE NOT NULL,

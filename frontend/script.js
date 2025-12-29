@@ -1,5 +1,34 @@
 const API_BASE = "/api";
 
+/* ==================== AUTH HELPERS ==================== */
+
+function getToken() {
+  return localStorage.getItem("token");
+}
+
+function logout() {
+  localStorage.removeItem("token");
+  location.href = "/login.html";
+}
+
+// fetch con JWT + manejo de 401 (no autenticado)
+async function apiFetch(url, options = {}) {
+  const token = getToken();
+
+  const headers = {
+    ...(options.headers || {}),
+    ...(options.body ? { "Content-Type": "application/json" } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const res = await fetch(url, { ...options, headers });
+
+  // Si el backend exige login y no hay token o expiró
+  if (res.status === 401) logout();
+
+  return res;
+}
+
 /* ==================== SECCIONES ==================== */
 
 function mostrarSeccion(id) {
@@ -21,8 +50,9 @@ document.querySelectorAll(".nav-btn").forEach(btn => {
 /* ==================== MATERIALES ==================== */
 
 async function cargarMateriales() {
-  const res = await fetch(`${API_BASE}/materiales`);
+  const res = await apiFetch(`${API_BASE}/materiales`);
   const data = await res.json();
+
   const tbody = document.querySelector("#tabla-materiales tbody");
   tbody.innerHTML = "";
 
@@ -37,6 +67,8 @@ async function cargarMateriales() {
       `;
       tbody.appendChild(tr);
     });
+  } else {
+    alert(data.message || "Error al cargar materiales");
   }
 }
 
@@ -52,9 +84,8 @@ document.getElementById("form-material").addEventListener("submit", async e => {
     ubicacion: form.ubicacion.value
   };
 
-  const res = await fetch(`${API_BASE}/materiales`, {
+  const res = await apiFetch(`${API_BASE}/materiales`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
 
@@ -75,7 +106,7 @@ document.getElementById("form-material").addEventListener("submit", async e => {
 let proyectoSeleccionadoId = null;
 
 async function cargarProyectos() {
-  const res = await fetch(`${API_BASE}/proyectos`);
+  const res = await apiFetch(`${API_BASE}/proyectos`);
   const data = await res.json();
 
   const ul = document.getElementById("lista-proyectos");
@@ -88,6 +119,8 @@ async function cargarProyectos() {
       li.onclick = () => seleccionarProyecto(p);
       ul.appendChild(li);
     });
+  } else {
+    alert(data.message || "Error al cargar proyectos");
   }
 }
 
@@ -111,9 +144,8 @@ document.getElementById("form-proyecto").addEventListener("submit", async e => {
     descripcion: form.descripcion.value
   };
 
-  const res = await fetch(`${API_BASE}/proyectos`, {
+  const res = await apiFetch(`${API_BASE}/proyectos`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
 
@@ -131,7 +163,7 @@ document.getElementById("form-proyecto").addEventListener("submit", async e => {
 /* ==================== MATERIALES EN PROYECTO ==================== */
 
 async function cargarMaterialesEnSelectProyecto() {
-  const res = await fetch(`${API_BASE}/materiales`);
+  const res = await apiFetch(`${API_BASE}/materiales`);
   const data = await res.json();
 
   const select = document.getElementById("select-material-proyecto");
@@ -144,6 +176,8 @@ async function cargarMaterialesEnSelectProyecto() {
       opt.textContent = `${m.codigo} - ${m.nombre} (stock: ${m.stock_actual})`;
       select.appendChild(opt);
     });
+  } else {
+    alert(data.message || "Error al cargar materiales para proyectos");
   }
 }
 
@@ -159,9 +193,8 @@ document.getElementById("form-salida-proyecto").addEventListener("submit", async
     comentario: form.comentario.value
   };
 
-  const res = await fetch(`${API_BASE}/movimientos/proyecto/${proyectoSeleccionadoId}/salida`, {
+  const res = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoSeleccionadoId}/salida`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
 
@@ -174,15 +207,14 @@ document.getElementById("form-salida-proyecto").addEventListener("submit", async
     cargarMateriales();
     cargarMaterialesEnSelectProyecto();
   } else {
-    alert(data.message);
+    alert(data.message || "Error al asignar material");
   }
 });
-
 
 /* ==================== MOVIMIENTOS POR PROYECTO ==================== */
 
 async function cargarMovimientosDeProyecto(idProyecto) {
-  const res = await fetch(`${API_BASE}/movimientos/proyecto/${idProyecto}/movimientos`);
+  const res = await apiFetch(`${API_BASE}/movimientos/proyecto/${idProyecto}/movimientos`);
   const data = await res.json();
 
   const tbody = document.querySelector("#tabla-movimientos-proyecto tbody");
@@ -200,17 +232,24 @@ async function cargarMovimientosDeProyecto(idProyecto) {
       `;
       tbody.appendChild(tr);
     });
+  } else {
+    alert(data.message || "Error al cargar movimientos del proyecto");
   }
 }
 
 /* ==================== ADMIN ALMACÉN ==================== */
 
 async function cargarAdminMateriales() {
-  const res = await fetch(`${API_BASE}/materiales`);
+  const res = await apiFetch(`${API_BASE}/materiales`);
   const data = await res.json();
 
   const tbody = document.querySelector("#tabla-admin-materiales tbody");
   tbody.innerHTML = "";
+
+  if (!data.ok) {
+    alert(data.message || "Error al cargar admin materiales");
+    return;
+  }
 
   data.materiales.forEach(m => {
     const tr = document.createElement("tr");
@@ -218,30 +257,32 @@ async function cargarAdminMateriales() {
       <td>${m.codigo}</td>
       <td>${m.nombre}</td>
       <td>${m.stock_actual}</td>
-      <td>${m.ubicacion} </td>
-     <td>
-        <button class="btn-edit" data-id="${m.id}">
-          ✏️ Editar
-        </button>
-
-        <button class="btn-delete" data-id="${m.id}">
-          🗑 Eliminar
-        </button>
+      <td>${m.ubicacion || ""}</td>
+      <td>
+        <button class="btn-edit" data-id="${m.id}">✏️ Editar</button>
+        <button class="btn-delete" data-id="${m.id}">🗑 Eliminar</button>
       </td>
     `;
-
     tbody.appendChild(tr);
   });
-
 
   document.querySelectorAll(".btn-edit").forEach(btn => {
     btn.onclick = () => cargarEditorMaterial(btn.dataset.id);
   });
+
+  document.querySelectorAll(".btn-delete").forEach(btn => {
+    btn.onclick = () => eliminarMaterial(btn.dataset.id);
+  });
 }
 
 async function cargarEditorMaterial(id) {
-  const res = await fetch(`${API_BASE}/materiales`);
+  const res = await apiFetch(`${API_BASE}/materiales`);
   const data = await res.json();
+
+  if (!data.ok) {
+    alert(data.message || "Error al cargar materiales");
+    return;
+  }
 
   const mat = data.materiales.find(m => m.id == id);
   if (!mat) return;
@@ -269,9 +310,8 @@ document.getElementById("form-editar-material").addEventListener("submit", async
     ubicacion: form.ubicacion.value
   };
 
-  const res = await fetch(`${API_BASE}/materiales/${id}`, {
+  const res = await apiFetch(`${API_BASE}/materiales/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
 
@@ -281,6 +321,8 @@ document.getElementById("form-editar-material").addEventListener("submit", async
     alert("Material actualizado");
     cargarAdminMateriales();
     cargarMateriales();
+  } else {
+    alert(data.message || "Error al actualizar material");
   }
 });
 
@@ -303,9 +345,8 @@ document.getElementById("form-ajuste-stock").addEventListener("submit", async e 
       ? `${API_BASE}/movimientos/entrada`
       : `${API_BASE}/movimientos/salida`;
 
-  const res = await fetch(endpoint, {
+  const res = await apiFetch(endpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
 
@@ -316,14 +357,14 @@ document.getElementById("form-ajuste-stock").addEventListener("submit", async e 
     cargarAdminMateriales();
     cargarMateriales();
   } else {
-    alert(data.message);
+    alert(data.message || "Error al registrar movimiento");
   }
 });
 
 /* ==================== MOVIMIENTOS GLOBALES ==================== */
 
 async function cargarMovimientosGlobal() {
-  const res = await fetch(`${API_BASE}/movimientos`);
+  const res = await apiFetch(`${API_BASE}/movimientos`);
   const data = await res.json();
 
   const tbody = document.querySelector("#tabla-movimientos-global tbody");
@@ -342,41 +383,45 @@ async function cargarMovimientosGlobal() {
       `;
       tbody.appendChild(tr);
     });
+  } else {
+    alert(data.message || "Error al cargar movimientos globales");
   }
 }
-/*-------ELIMINAR MATERIAL O PROYECTO-------*/
+
+/* ==================== ELIMINAR MATERIAL / PROYECTO ==================== */
 
 async function eliminarMaterial(id) {
   if (!confirm("¿Estás seguro de que deseas eliminar este material?")) return;
 
-  const res = await feth('/api//materiales/${id}', {
+  const res = await apiFetch(`${API_BASE}/materiales/${id}`, {
     method: "DELETE"
   });
 
   const data = await res.json();
 
-  if (data.success) {
+  if (data.ok) {
     alert("Material eliminado correctamente");
-    cargarMaterialesAdmin();
-  }else {
-    alert("Ërror al eliminar material");
+    cargarAdminMateriales();
+    cargarMateriales();
+  } else {
+    alert(data.message || "Error al eliminar material");
   }
 }
 
 async function eliminarProyecto(id) {
   if (!confirm("¿Eliminar proyecto?")) return;
 
-  const res = await fetch(`/api/proyectos/${id}`, {
+  const res = await apiFetch(`${API_BASE}/proyectos/${id}`, {
     method: "DELETE"
   });
 
   const data = await res.json();
 
-  if (data.success) {
+  if (data.ok) {
     alert("Proyecto eliminado");
     cargarProyectos();
   } else {
-    alert("Error al eliminar proyecto");
+    alert(data.message || "Error al eliminar proyecto");
   }
 }
 

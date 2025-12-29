@@ -2,14 +2,14 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
-import dotenv from "dotenv";
+
 
 import materialRoutes from "./routes/materiales.js";
 import proyectoRoutes from "./routes/proyectos.js";
 import movimientoRoutes from "./routes/movimientos.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
+import authRoutes from "./routes/auth.js";
 
-dotenv.config();
 
 const app = express();
 
@@ -30,6 +30,7 @@ app.use(express.static(frontendPath));
 app.use("/api/materiales", materialRoutes);
 app.use("/api/proyectos", proyectoRoutes);
 app.use("/api/movimientos", movimientoRoutes);
+app.use("/api/auth", authRoutes);
 
 app.get("/", (_req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
