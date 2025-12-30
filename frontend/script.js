@@ -645,3 +645,4 @@ async function eliminarProyecto(id) {
   cargarProyectos();
   cargarMaterialesEnSelectProyecto();
 })();
+
