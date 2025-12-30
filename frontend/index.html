@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8" />
   <title>SIMEC - Sistema de Almacén</title>
@@ -8,535 +7,158 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
   <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
+<div class="app">
 
-  <div class="app">
-
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-
-      <div class="logo">
-        <div class="logo-icon">
-          <span class="material-icons">inventory_2</span>
-        </div>
-        <div class="logo-text">
-          <h1>SIMEC</h1>
-          <p>Sistema de Almacén</p>
-        </div>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">
+        <span class="material-icons">inventory_2</span>
       </div>
-
-      <nav class="nav">
-        <button class="nav-btn" data-section="usuarios" id="btn-nav-usuarios" style="display:none;">
-  <span class="material-icons">manage_accounts</span>
-  Usuarios
-</button>
-
-        <button class="nav-btn activa" data-section="materiales">
-          <span class="material-icons">warehouse</span>
-          Materiales
-        </button>
-
-        <button class="nav-btn" data-section="proyectos">
-          <span class="material-icons">assignment</span>
-          Proyectos
-        </button>
-
-        <button class="nav-btn" data-section="admin-almacen">
-          <span class="material-icons">build</span>
-          Admin Almacén
-        </button>
-
-        <button class="nav-btn" data-section="movimientos">
-          <span class="material-icons">timeline</span>
-          Movimientos
-        </button>
-
-        <!-- Si tienes sección usuarios en tu HTML, déjala; si no, no pasa nada -->
-        <button class="nav-btn" data-section="usuarios" style="display:none;">
-          <span class="material-icons">group</span>
-          Usuarios
-        </button>
-      </nav>
-
-      <footer class="sidebar-footer">
-        <small>SIMEC · Material Design UI</small>
-      </footer>
-    </aside>
-
-    <!-- MAIN CONTENT -->
-    <main class="main">
-
-      <!-- HEADER -->
-      <header class="main-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-        <div>
-          <h2>Panel de Control</h2>
-          <p>Gestión de materiales, proyectos y movimientos.</p>
-        </div>
-
-        <button class="btn-secondary" type="button" onclick="logout()">Salir</button>
-      </header>
-
-      <!-- =============================
-           SECCIÓN: MATERIALES
-           ============================= -->
-      <section id="materiales" class="seccion activa">
-        <div class="section-title">
-          <h3>Materiales</h3>
-          <p>Alta y consulta de materiales registrados.</p>
-        </div>
-
-        <div class="grid-2">
-
-          <!-- Tabla materiales -->
-          <div class="card">
-            <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-              <h4 style="margin:0;">Lista de materiales</h4>
-
-              <div style="display:flex; gap:8px;">
-                <button class="btn-secondary" id="btn-export-materiales-excel" type="button">Exportar Excel</button>
-                <button class="btn-secondary" id="btn-export-materiales-pdf" type="button">Exportar PDF</button>
-              </div>
-            </div>
-
-            <div class="card-body table-wrapper">
-              <table class="table" id="tabla-materiales">
-                <thead>
-                  <tr>
-                    <th>Código</th>
-                    <th>Nombre</th>
-                    <th>Stock</th>
-                    <th>Ubicación</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Form nuevo material -->
-          <div class="card">
-            <div class="card-header">
-              <h4>Registrar nuevo material</h4>
-            </div>
-
-            <div class="card-body">
-              <form id="form-material" class="form">
-
-                <div class="form-group">
-                  <label>Código *</label>
-                  <input type="text" name="codigo" required />
-                </div>
-
-                <div class="form-group">
-                  <label>Nombre *</label>
-                  <input type="text" name="nombre" required />
-                </div>
-
-                <!-- PROVEEDOR -->
-                <div class="form-group">
-                  <label>Proveedor</label>
-                  <div style="display:flex; gap:8px;">
-                    <select id="select-proveedor-material" name="proveedor_id" style="flex:1;"></select>
-                    <button type="button" class="btn-secondary" id="btn-nuevo-proveedor">Nuevo</button>
-                  </div>
-                </div>
-
-                <div id="panel-nuevo-proveedor" style="display:none; margin-top:10px;">
-                  <div class="form-group">
-                    <label>Nombre proveedor *</label>
-                    <input type="text" id="prov-nombre" />
-                  </div>
-                  <div class="form-group">
-                    <label>Teléfono</label>
-                    <input type="text" id="prov-telefono" />
-                  </div>
-                  <div class="form-group">
-                    <label>Email</label>
-                    <input type="text" id="prov-email" />
-                  </div>
-                  <div class="form-group">
-                    <label>Notas</label>
-                    <input type="text" id="prov-notas" />
-                  </div>
-                  <button type="button" class="btn-primary" id="btn-guardar-proveedor">
-                    Guardar proveedor
-                  </button>
-                </div>
-
-                <div class="form-group">
-                  <label>Número de ticket (opcional)</label>
-                  <input type="text" name="ticket_numero" />
-                </div>
-
-                <!-- PROTOCOLO -->
-                <div class="form-group">
-                  <label>¿Requiere protocolo?</label>
-                  <select id="requiere-protocolo" name="requiere_protocolo">
-                    <option value="0">No</option>
-                    <option value="1">Sí</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label>Protocolo (opcional)</label>
-                  <input type="text" id="protocolo-texto" name="protocolo_texto" disabled />
-                </div>
-
-                <div class="form-group">
-                  <label>Precio unitario (opcional)</label>
-                  <input type="number" name="precio_unitario" step="0.01" />
-                </div>
-
-                <div class="form-group">
-                  <label>Stock inicial</label>
-                  <input type="number" name="stock_inicial" step="0.01" />
-                </div>
-
-                <div class="form-group">
-                  <label>Stock mínimo</label>
-                  <input type="number" name="stock_minimo" step="0.01" />
-                </div>
-
-                <div class="form-group">
-                  <label>Ubicación</label>
-                  <input type="text" name="ubicacion" />
-                </div>
-
-                <button class="btn-primary" type="submit">
-                  <span class="material-icons">save</span> Guardar
-                </button>
-              </form>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- =============================
-           SECCIÓN: PROYECTOS
-           ============================= -->
-      <section id="proyectos" class="seccion">
-
-        <div class="section-title">
-          <h3>Proyectos</h3>
-          <p>Gestión de proyectos, etapas y salidas de material asociadas.</p>
-        </div>
-
-        <div class="grid-2">
-
-          <!-- Lista proyectos -->
-          <div class="card">
-            <div class="card-header">
-              <h4>Proyectos registrados</h4>
-            </div>
-
-            <div class="card-body">
-              <ul id="lista-proyectos" class="list"></ul>
-            </div>
-
-            <div class="card-footer">
-              <h4>Nuevo Proyecto</h4>
-
-              <form id="form-proyecto" class="form">
-
-                <div class="form-group">
-                  <label>Clave *</label>
-                  <input type="text" name="clave" required />
-                </div>
-
-                <div class="form-group">
-                  <label>Nombre *</label>
-                  <input type="text" name="nombre" required />
-                </div>
-
-                <div class="form-group">
-                  <label>Cliente</label>
-                  <input type="text" name="cliente" />
-                </div>
-
-                <div class="form-group">
-                  <label>Fecha inicio</label>
-                  <input type="date" name="fecha_inicio" />
-                </div>
-
-                <div class="form-group">
-                  <label>Descripción</label>
-                  <textarea name="descripcion" rows="2"></textarea>
-                </div>
-
-                <button class="btn-primary" type="submit">
-                  <span class="material-icons">add_circle</span>
-                  Crear Proyecto
-                </button>
-
-              </form>
-            </div>
-          </div>
-
-          <!-- Materiales asignados -->
-          <div class="card">
-            <div class="card-header">
-              <h4>Materiales del proyecto</h4>
-              <p class="small">
-  Proyecto seleccionado:
-  <span id="info-proyecto-seleccionado">Ninguno</span>
-</p>
-</div>
-
-<!-- ETAPAS -->
-<div class="card-body">
-  <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px;">
-
-    <strong>Etapa activa:</strong>
-    <span id="etapa-activa-texto">—</span>
-
-    <label style="margin-left:10px;">Ver etapa:</label>
-    <select id="select-etapa" style="min-width:220px;">
-      <option value="__ALL__">Todas</option>
-    </select>
-
-    <button class="btn-secondary" type="button" id="btn-crear-etapa">
-      Crear etapa
-    </button>
-
-    <button class="btn-secondary" type="button" id="btn-cerrar-etapa">
-      Cerrar etapa
-    </button>
-    <button class="btn-secondary" type="button" id="btn-export-etapa-excel">Excel etapa</button>
-
-    <button class="btn-secondary" type="button" id="btn-export-etapa-pdf">PDF etapa</button>
-
-
-    <div class="small" style="margin-left:auto;">
-
-      Total etapa: <strong id="total-etapa">$0.00</strong> ·
-
-      Total proyecto: <strong id="total-proyecto">$0.00</strong>
-
+      <div class="logo-text">
+        <h1>SIMEC</h1>
+        <p>Sistema de Almacén</p>
+      </div>
     </div>
 
+    <nav class="nav">
+      <button class="nav-btn activa" data-section="materiales">
+        <span class="material-icons">warehouse</span> Materiales
+      </button>
 
-  </div>
+      <button class="nav-btn" data-section="proyectos">
+        <span class="material-icons">assignment</span> Proyectos
+      </button>
 
-  <div id="etapas-resumen" class="small" style="opacity:.85;">
-    <!-- aquí se mostrará el resumen de etapas -->
-  </div>
-</div>
+      <button class="nav-btn" data-section="admin-almacen">
+        <span class="material-icons">build</span> Admin Almacén
+      </button>
 
+      <button class="nav-btn" data-section="movimientos">
+        <span class="material-icons">timeline</span> Movimientos
+      </button>
 
-            <div class="card-body">
-              <form id="form-salida-proyecto" class="form form-inline">
+      <!-- SOLO ADMIN -->
+      <button class="nav-btn" data-section="usuarios" id="btn-nav-usuarios" style="display:none;">
+        <span class="material-icons">manage_accounts</span> Usuarios
+      </button>
+    </nav>
 
-                <div class="form-group">
-                  <label>Material</label>
-                  <select id="select-material-proyecto" name="material_id"></select>
-                </div>
+    <footer class="sidebar-footer">
+      <small>SIMEC</small>
+    </footer>
+  </aside>
 
-                <div class="form-group">
-                  <label>Cantidad</label>
-                  <input type="number" step="0.01" name="cantidad" required />
-                </div>
+  <!-- MAIN -->
+  <main class="main">
 
-                <div class="form-group">
-                  <label>Comentario</label>
-                  <input type="text" name="comentario" />
-                </div>
+    <header class="main-header">
+      <div>
+        <h2>Panel de Control</h2>
+        <p>Gestión de almacén y proyectos</p>
+      </div>
+      <button onclick="logout()" class="btn-secondary">Salir</button>
+    </header>
 
-                <button class="btn-primary" type="submit">
-                  <span class="material-icons">send</span>
-                  Registrar salida
-                </button>
-              </form>
-            </div>
+    <!-- ================= MATERIALES ================= -->
+    <section id="materiales" class="seccion activa">
+      <div class="section-title">
+        <h3>Materiales</h3>
+      </div>
 
-            <div class="card-body table-wrapper">
-              <table class="table" id="tabla-movimientos-proyecto">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Material</th>
-                    <th>Tipo</th>
-                    <th>Cantidad</th>
-                    <th>Comentario</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-
+      <div class="card">
+        <div class="card-header">
+          <h4>Lista de materiales</h4>
+          <div>
+            <button id="btn-export-materiales-excel" class="btn-secondary">Excel</button>
+            <button id="btn-export-materiales-pdf" class="btn-secondary">PDF</button>
           </div>
-
-        </div>
-      </section>
-
-      <!-- =============================
-           SECCIÓN: ADMIN ALMACÉN
-           ============================= -->
-      <section id="admin-almacen" class="seccion">
-
-        <div class="section-title">
-          <h3>Admin de Almacén</h3>
-          <p>Edición y ajustes de materiales.</p>
         </div>
 
-        <div class="grid-2">
-
-          <div class="card">
-            <div class="card-header">
-              <h4>Materiales registrados</h4>
-            </div>
-
-            <div class="card-body table-wrapper">
-              <table class="table" id="tabla-admin-materiales">
-                <thead>
-                  <tr>
-                    <th>Código</th>
-                    <th>Nombre</th>
-                    <th>Stock</th>
-                    <th>Ubicación</th>
-                    <th>Acción</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <h4>Editar Material</h4>
-            </div>
-
-            <div class="card-body">
-
-              <div id="admin-form-panel" style="display:none;">
-                <form id="form-editar-material" class="form">
-
-                  <div class="form-group">
-                    <label>Código</label>
-                    <input type="text" name="codigo" disabled />
-                  </div>
-
-                  <div class="form-group">
-                    <label>Nombre</label>
-                    <input type="text" name="nombre" />
-                  </div>
-
-                  <div class="form-group">
-                    <label>Stock mínimo</label>
-                    <input type="number" name="stock_minimo" step="0.01" />
-                  </div>
-
-                  <div class="form-group">
-                    <label>Ubicación</label>
-                    <input type="text" name="ubicacion" />
-                  </div>
-
-                  <!-- NUEVAS CARACTERÍSTICAS -->
-                  <div class="form-group">
-                    <label>Proveedor</label>
-                    <select id="select-proveedor-editar" name="proveedor_id"></select>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Número de ticket (opcional)</label>
-                    <input type="text" name="ticket_numero" />
-                  </div>
-
-                  <div class="form-group">
-                    <label>¿Requiere protocolo?</label>
-                    <select id="requiere-protocolo-editar" name="requiere_protocolo">
-                      <option value="0">No</option>
-                      <option value="1">Sí</option>
-                    </select>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Protocolo (opcional)</label>
-                    <input type="text" id="protocolo-texto-editar" name="protocolo_texto" disabled />
-                  </div>
-
-                  <div class="form-group">
-                    <label>Precio unitario (opcional)</label>
-                    <input type="number" name="precio_unitario" step="0.01" />
-                  </div>
-
-                  <button class="btn-primary" type="submit">
-                    <span class="material-icons">save</span>
-                    Guardar cambios
-                  </button>
-
-                </form>
-
-                <hr class="divider">
-
-                <h4>Ajuste de Stock</h4>
-
-                <form id="form-ajuste-stock" class="form form-inline">
-
-                  <div class="form-group">
-                    <label>Tipo</label>
-                    <select name="tipo">
-                      <option value="entrada">Entrada</option>
-                      <option value="salida">Salida</option>
-                    </select>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Cantidad</label>
-                    <input type="number" name="cantidad" step="0.01" required />
-                  </div>
-
-                  <div class="form-group">
-                    <label>Comentario</label>
-                    <input type="text" name="comentario" />
-                  </div>
-
-                  <button class="btn-secondary" type="submit">
-                    <span class="material-icons">autorenew</span>
-                    Aplicar ajuste
-                  </button>
-
-                </form>
-
-              </div>
-
-              <p class="hint">Seleccione un material para editar.</p>
-
-            </div>
-          </div>
-
+        <div class="card-body table-wrapper">
+          <table class="table" id="tabla-materiales">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Stock</th>
+                <th>Ubicación</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- =============================
-           SECCIÓN: MOVIMIENTOS
-           ============================= -->
-      <section id="movimientos" class="seccion">
+    <!-- ================= PROYECTOS ================= -->
+    <section id="proyectos" class="seccion">
+      <div class="section-title">
+        <h3>Proyectos</h3>
+      </div>
 
-        <div class="section-title">
-          <h3>Movimientos</h3>
-          <p>Historial global de entradas y salidas.</p>
+      <div class="grid-2">
+
+        <div class="card">
+          <div class="card-header">
+            <h4>Proyectos</h4>
+          </div>
+          <div class="card-body">
+            <ul id="lista-proyectos" class="list"></ul>
+          </div>
+
+          <div class="card-footer">
+            <form id="form-proyecto" class="form">
+              <input name="clave" placeholder="Clave" required />
+              <input name="nombre" placeholder="Nombre" required />
+              <button class="btn-primary" type="submit">Crear proyecto</button>
+            </form>
+          </div>
         </div>
 
         <div class="card">
           <div class="card-header">
-            <h4>Historial</h4>
+            <h4>Proyecto seleccionado</h4>
+            <p class="small">
+              <span id="info-proyecto-seleccionado">Ninguno</span>
+            </p>
+          </div>
+
+          <div class="card-body">
+            <div style="display:flex; gap:10px; align-items:center;">
+              <strong>Etapa activa:</strong>
+              <span id="etapa-activa-texto">—</span>
+
+              <button id="btn-crear-etapa" class="btn-secondary">Crear etapa</button>
+              <button id="btn-cerrar-etapa" class="btn-secondary">Cerrar etapa</button>
+
+              <select id="select-etapa">
+                <option value="__ALL__">Todas</option>
+              </select>
+
+              <button id="btn-export-etapa-excel" class="btn-secondary">Excel etapa</button>
+              <button id="btn-export-etapa-pdf" class="btn-secondary">PDF etapa</button>
+            </div>
+
+            <div class="small" style="margin-top:10px;">
+              Total etapa: <strong id="total-etapa">$0.00</strong> ·
+              Total proyecto: <strong id="total-proyecto">$0.00</strong>
+            </div>
           </div>
 
           <div class="card-body table-wrapper">
-            <table class="table" id="tabla-movimientos-global">
+            <table class="table" id="tabla-movimientos-proyecto">
               <thead>
                 <tr>
                   <th>Fecha</th>
                   <th>Material</th>
-                  <th>Proyecto</th>
-                  <th>Tipo</th>
                   <th>Cantidad</th>
-                  <th>Comentario</th>
+                  <th>Usuario</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -544,96 +166,84 @@
           </div>
         </div>
 
-      </section>
+      </div>
+    </section>
 
-      <!-- Si tienes usuarios, aquí iría la sección. Si no existe, no pasa nada. -->
+    <!-- ================= ADMIN ALMACÉN ================= -->
+    <section id="admin-almacen" class="seccion">
+      <div class="section-title">
+        <h3>Admin Almacén</h3>
+      </div>
+      <p>Solo administradores.</p>
+    </section>
 
-    </main>
+    <!-- ================= MOVIMIENTOS ================= -->
+    <section id="movimientos" class="seccion">
+      <div class="section-title">
+        <h3>Movimientos</h3>
+      </div>
+      <div class="card">
+        <div class="card-body table-wrapper">
+          <table class="table" id="tabla-movimientos-global">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Material</th>
+                <th>Proyecto</th>
+                <th>Cantidad</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-  </div>
-  <!-- =============================
-     SECCIÓN: USUARIOS (SOLO ADMIN)
-     ============================= -->
-<section id="usuarios" class="seccion">
-  <div class="section-title">
-    <h3>Usuarios</h3>
-    <p>Crear y listar usuarios (solo admin).</p>
-  </div>
-
-  <div class="grid-2">
-
-    <!-- Tabla usuarios -->
-    <div class="card">
-      <div class="card-header">
-        <h4>Lista de usuarios</h4>
+    <!-- ================= USUARIOS ================= -->
+    <section id="usuarios" class="seccion">
+      <div class="section-title">
+        <h3>Usuarios</h3>
       </div>
 
-      <div class="card-body table-wrapper">
-        <table class="table" id="tabla-usuarios">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Email</th>
-              <th>Rol</th>
-              <th>Activo</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <div class="card-footer">
-        <button class="btn-secondary" type="button" id="btn-recargar-usuarios">
-          Recargar
-        </button>
-      </div>
-    </div>
-
-    <!-- Form crear usuario -->
-    <div class="card">
-      <div class="card-header">
-        <h4>Crear usuario</h4>
-      </div>
-
-      <div class="card-body">
-        <form id="form-usuario" class="form">
-          <div class="form-group">
-            <label>Nombre *</label>
-            <input type="text" name="nombre" required />
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><h4>Usuarios</h4></div>
+          <div class="card-body table-wrapper">
+            <table class="table" id="tabla-usuarios">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Rol</th>
+                  <th>Activo</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
           </div>
+        </div>
 
-          <div class="form-group">
-            <label>Email *</label>
-            <input type="email" name="email" required />
+        <div class="card">
+          <div class="card-header"><h4>Crear usuario</h4></div>
+          <div class="card-body">
+            <form id="form-usuario" class="form">
+              <input name="nombre" placeholder="Nombre" required />
+              <input name="email" type="email" placeholder="Email" required />
+              <input name="password" type="password" placeholder="Contraseña" required />
+              <select name="rol">
+                <option value="user">user</option>
+                <option value="admin">admin</option>
+              </select>
+              <button class="btn-primary">Crear</button>
+            </form>
           </div>
-
-          <div class="form-group">
-            <label>Contraseña *</label>
-            <input type="password" name="password" required />
-          </div>
-
-          <div class="form-group">
-            <label>Rol *</label>
-            <select name="rol" required>
-              <option value="user">user</option>
-              <option value="admin">admin</option>
-            </select>
-          </div>
-
-          <button class="btn-primary" type="submit">
-            <span class="material-icons">person_add</span>
-            Crear usuario
-          </button>
-        </form>
+        </div>
       </div>
-    </div>
+    </section>
 
-  </div>
-</section>
+  </main>
+</div>
 
-
-  <script src="script.js"></script>
-  <script src="js/auth.js"></script>
+<script src="script.js"></script>
 </body>
-
 </html>
