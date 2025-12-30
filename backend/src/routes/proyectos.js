@@ -1,5 +1,7 @@
 import express from "express";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { exportProyectoExcel, exportProyectoPDF } from "../controllers/exportController.js";
+
 
 import {
   crearProyecto,
@@ -9,6 +11,10 @@ import {
 } from "../controllers/proyectosController.js";
 
 const router = express.Router();
+
+// Exportación de proyectos
+router.get("/:id/export/excel", exportProyectoExcel);
+router.get("/:id/export/pdf", exportProyectoPDF);
 
 // 🔒 Todo proyectos requiere login
 router.use(requireAuth);

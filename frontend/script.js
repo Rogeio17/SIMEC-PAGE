@@ -28,6 +28,38 @@ async function apiFetch(url, options = {}) {
 
   return res;
 }
+// Descargar archivo (Excel/PDF)
+async function descargarArchivo(url, nombreArchivo) {
+  const res = await apiFetch(url);
+
+  if (res.status === 403) {
+    alert("No tienes permisos para exportar.");
+    return;
+  }
+
+  if (!res.ok) {
+    alert("No se pudo exportar.");
+    return;
+  }
+
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  const objectUrl = URL.createObjectURL(blob);
+  a.href = objectUrl;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+document.getElementById("btn-export-materiales-excel")?.addEventListener("click", () => {
+  descargarArchivo(`${API_BASE}/materiales/export/excel`, "materiales.xlsx");
+});
+
+document.getElementById("btn-export-materiales-pdf")?.addEventListener("click", () => {
+  descargarArchivo(`${API_BASE}/materiales/export/pdf`, "materiales.pdf");
+});
+
 
 /* ==================== PERMISOS UI ==================== */
 
@@ -242,11 +274,51 @@ async function cargarProyectos() {
 
   if (data.ok) {
     data.proyectos.forEach(p => {
-      const li = document.createElement("li");
-      li.textContent = `${p.clave} - ${p.nombre}`;
-      li.onclick = () => seleccionarProyecto(p);
-      ul.appendChild(li);
-    });
+  const li = document.createElement("li");
+  li.style.display = "flex";
+  li.style.alignItems = "center";
+  li.style.justifyContent = "space-between";
+  li.style.gap = "10px";
+
+  const info = document.createElement("span");
+  info.textContent = `${p.clave} - ${p.nombre}`;
+  info.style.cursor = "pointer";
+  info.onclick = () => seleccionarProyecto(p);
+
+  const acciones = document.createElement("div");
+  acciones.style.display = "flex";
+  acciones.style.gap = "8px";
+
+  const btnExcel = document.createElement("button");
+  btnExcel.className = "btn-secondary";
+  btnExcel.textContent = "Excel";
+  btnExcel.onclick = (e) => {
+    e.stopPropagation();
+    descargarArchivo(
+      `${API_BASE}/proyectos/${p.id}/export/excel`,
+      `proyecto_${p.clave}_movimientos.xlsx`
+    );
+  };
+
+  const btnPdf = document.createElement("button");
+  btnPdf.className = "btn-secondary";
+  btnPdf.textContent = "PDF";
+  btnPdf.onclick = (e) => {
+    e.stopPropagation();
+    descargarArchivo(
+      `${API_BASE}/proyectos/${p.id}/export/pdf`,
+      `proyecto_${p.clave}_movimientos.pdf`
+    );
+  };
+
+  acciones.appendChild(btnExcel);
+  acciones.appendChild(btnPdf);
+
+  li.appendChild(info);
+  li.appendChild(acciones);
+  ul.appendChild(li);
+});
+
   } else {
     alert(data.message || "Error al cargar proyectos");
   }

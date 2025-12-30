@@ -1,5 +1,7 @@
 import express from "express";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { exportMaterialesExcel, exportMaterialesPDF } from "../controllers/exportController.js";
+
 
 import {
   crearMaterial,
@@ -14,6 +16,10 @@ import {
 } from "../controllers/movimientosController.js";
 
 const router = express.Router();
+// Exportación de materiales
+router.get("/export/excel", exportMaterialesExcel);
+router.get("/export/pdf", exportMaterialesPDF);
+
 
 // 🔒 Todo materiales requiere login
 router.use(requireAuth);
