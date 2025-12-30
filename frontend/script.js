@@ -503,6 +503,75 @@ async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
     tbody.appendChild(tr);
   });
 }
+/* ==================== TOTALES + EXPORT ETAPA ==================== */
+
+function money(n) {
+  const x = Number(n || 0);
+  return "$" + x.toFixed(2);
+}
+
+async function calcularTotalesProyectoYEtapa() {
+  if (!proyectoSeleccionadoId) return;
+
+  // Traer todos los movimientos del proyecto (para total proyecto)
+  const resAll = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoSeleccionadoId}/movimientos`);
+  const dataAll = await resAll.json();
+  if (!dataAll.ok) return;
+
+  const totalProyecto = dataAll.movimientos.reduce((acc, mv) => {
+    // si tu backend ya manda total, úsalo. Si no, usa precio_unitario*cantidad
+    const total = mv.total ?? (Number(mv.precio_unitario || 0) * Number(mv.cantidad || 0));
+    return acc + Number(total || 0);
+  }, 0);
+
+  document.getElementById("total-proyecto") && (document.getElementById("total-proyecto").textContent = money(totalProyecto));
+
+  // Total etapa (si es __ALL__ usa totalProyecto)
+  if (etapaSeleccionadaId === "__ALL__") {
+    document.getElementById("total-etapa") && (document.getElementById("total-etapa").textContent = money(totalProyecto));
+    return;
+  }
+
+  const resEt = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoSeleccionadoId}/etapa/${etapaSeleccionadaId}/movimientos`);
+  const dataEt = await resEt.json();
+  if (!dataEt.ok) return;
+
+  const totalEtapa = dataEt.movimientos.reduce((acc, mv) => {
+    const total = mv.total ?? (Number(mv.precio_unitario || 0) * Number(mv.cantidad || 0));
+    return acc + Number(total || 0);
+  }, 0);
+
+  document.getElementById("total-etapa") && (document.getElementById("total-etapa").textContent = money(totalEtapa));
+}
+
+// Llama a totales cada vez que refrescas movimientos
+const _refrescarMovimientosProyectoOriginal = refrescarMovimientosProyecto;
+refrescarMovimientosProyecto = async function () {
+  await _refrescarMovimientosProyectoOriginal();
+  await calcularTotalesProyectoYEtapa();
+};
+
+// Botones export etapa
+document.getElementById("btn-export-etapa-excel")?.addEventListener("click", () => {
+  if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero");
+  if (etapaSeleccionadaId === "__ALL__") return alert("Selecciona una etapa específica (no 'Todas').");
+
+  descargarArchivo(
+    `${API_BASE}/proyectos/${proyectoSeleccionadoId}/etapas/${etapaSeleccionadaId}/export/excel`,
+    `proyecto_${proyectoSeleccionadoId}_etapa_${etapaSeleccionadaId}.xlsx`
+  );
+});
+
+document.getElementById("btn-export-etapa-pdf")?.addEventListener("click", () => {
+  if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero");
+  if (etapaSeleccionadaId === "__ALL__") return alert("Selecciona una etapa específica (no 'Todas').");
+
+  descargarArchivo(
+    `${API_BASE}/proyectos/${proyectoSeleccionadoId}/etapas/${etapaSeleccionadaId}/export/pdf`,
+    `proyecto_${proyectoSeleccionadoId}_etapa_${etapaSeleccionadaId}.pdf`
+  );
+});
+
 
 /* ==================== BOTONES ETAPAS ==================== */
 
