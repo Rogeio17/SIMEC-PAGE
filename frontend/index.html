@@ -29,6 +29,11 @@
       </div>
 
       <nav class="nav">
+        <button class="nav-btn" data-section="usuarios" id="btn-nav-usuarios" style="display:none;">
+  <span class="material-icons">manage_accounts</span>
+  Usuarios
+</button>
+
         <button class="nav-btn activa" data-section="materiales">
           <span class="material-icons">warehouse</span>
           Materiales
@@ -546,6 +551,86 @@
     </main>
 
   </div>
+  <!-- =============================
+     SECCIÓN: USUARIOS (SOLO ADMIN)
+     ============================= -->
+<section id="usuarios" class="seccion">
+  <div class="section-title">
+    <h3>Usuarios</h3>
+    <p>Crear y listar usuarios (solo admin).</p>
+  </div>
+
+  <div class="grid-2">
+
+    <!-- Tabla usuarios -->
+    <div class="card">
+      <div class="card-header">
+        <h4>Lista de usuarios</h4>
+      </div>
+
+      <div class="card-body table-wrapper">
+        <table class="table" id="tabla-usuarios">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Rol</th>
+              <th>Activo</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card-footer">
+        <button class="btn-secondary" type="button" id="btn-recargar-usuarios">
+          Recargar
+        </button>
+      </div>
+    </div>
+
+    <!-- Form crear usuario -->
+    <div class="card">
+      <div class="card-header">
+        <h4>Crear usuario</h4>
+      </div>
+
+      <div class="card-body">
+        <form id="form-usuario" class="form">
+          <div class="form-group">
+            <label>Nombre *</label>
+            <input type="text" name="nombre" required />
+          </div>
+
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" name="email" required />
+          </div>
+
+          <div class="form-group">
+            <label>Contraseña *</label>
+            <input type="password" name="password" required />
+          </div>
+
+          <div class="form-group">
+            <label>Rol *</label>
+            <select name="rol" required>
+              <option value="user">user</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+
+          <button class="btn-primary" type="submit">
+            <span class="material-icons">person_add</span>
+            Crear usuario
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</section>
+
 
   <script src="script.js"></script>
   <script src="js/auth.js"></script>

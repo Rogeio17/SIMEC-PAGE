@@ -32,6 +32,30 @@ async function apiFetch(url, options = {}) {
   if (res.status === 401) logout();
   return res;
 }
+/* ==================== UI POR ROL ==================== */
+
+// muestra/oculta navegación de Usuarios según rol
+function aplicarUIporRol() {
+  const btnUsuarios = document.getElementById("btn-nav-usuarios");
+  if (btnUsuarios) btnUsuarios.style.display = esAdmin() ? "flex" : "none";
+
+  // opcional: ocultar secciones para no-admin
+  const btnAdminAlmacen = document.querySelector('[data-section="admin-almacen"]');
+  if (btnAdminAlmacen) btnAdminAlmacen.style.display = esAdmin() ? "flex" : "none";
+
+  const btnProyectos = document.querySelector('[data-section="proyectos"]');
+  if (btnProyectos) btnProyectos.style.display = "flex"; // la sección puede verse pero crear ya lo bloqueas
+}
+
+// ejecuta al cargar
+aplicarUIporRol();
+
+// recargar usuarios
+document.getElementById("btn-recargar-usuarios")?.addEventListener("click", () => {
+  if (!esAdmin()) return alert("No tienes permisos.");
+  cargarUsuarios();
+});
+
 
 /* ==================== PERMISOS UI ==================== */
 
