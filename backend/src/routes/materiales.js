@@ -1,30 +1,33 @@
 import express from "express";
-import { requiereAutch, requiereRole} from "../middlewares/auth.js";
+import { requireAuth, requireRole } from "../middlewares/auth.js";
+
 import {
   crearMaterial,
   listarMateriales,
-  actualizarMaterial
+  actualizarMaterial,
+  eliminarMaterial,
 } from "../controllers/materialesController.js";
 
 import {
   registrarEntradaGeneral,
-  registrarSalidaGeneral
+  registrarSalidaGeneral,
 } from "../controllers/movimientosController.js";
-
-import { 
-  eliminarMaterial } from "../controllers/materialesController.js";
 
 const router = express.Router();
 
-router.use(requiereAutch);
+// 🔒 Todo materiales requiere login
+router.use(requireAuth);
 
-router.get("/", listarMateriales); 
+// ✅ Cualquiera logueado puede VER materiales
+router.get("/", listarMateriales);
 
+// 🔒 Solo admin puede CREAR/EDITAR/ELIMINAR (Admin Almacén)
 router.post("/", requireRole("admin"), crearMaterial);
 router.put("/:id", requireRole("admin"), actualizarMaterial);
 router.delete("/:id", requireRole("admin"), eliminarMaterial);
 
-router.post("/entrada", registrarEntradaGeneral);  
-router.post("/salida", registrarSalidaGeneral);    
+// 🔒 Movimientos de stock desde materiales: SOLO admin
+router.post("/entrada", requireRole("admin"), registrarEntradaGeneral);
+router.post("/salida", requireRole("admin"), registrarSalidaGeneral);
 
 export default router;

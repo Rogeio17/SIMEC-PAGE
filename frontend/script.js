@@ -11,7 +11,7 @@ function logout() {
   location.href = "/login.html";
 }
 
-// fetch con JWT + manejo de 401 (no autenticado)
+// fetch con JWT + manejo de 401/403
 async function apiFetch(url, options = {}) {
   const token = getToken();
 
@@ -29,11 +29,55 @@ async function apiFetch(url, options = {}) {
   return res;
 }
 
+/* ==================== PERMISOS UI ==================== */
+
+let CURRENT_USER = null;
+
+async function cargarUsuarioActual() {
+  try {
+    const res = await apiFetch(`${API_BASE}/auth/me`);
+    const data = await res.json();
+    if (!data.ok) return;
+
+    CURRENT_USER = data.user;
+    const esAdmin = CURRENT_USER?.rol === "admin";
+
+    // Ocultar botones del sidebar si no es admin
+    const btnAdminAlmacen = document.querySelector('.nav-btn[data-section="admin-almacen"]');
+    const btnUsuarios = document.querySelector('.nav-btn[data-section="usuarios"]');
+
+    if (!esAdmin) {
+      if (btnAdminAlmacen) btnAdminAlmacen.style.display = "none";
+      if (btnUsuarios) btnUsuarios.style.display = "none";
+
+      // Ocultar bloque "Nuevo Proyecto" (card-footer que contiene el form)
+      const formProyecto = document.getElementById("form-proyecto");
+      if (formProyecto) {
+        const footer = formProyecto.closest(".card-footer");
+        if (footer) footer.style.display = "none";
+      }
+    }
+  } catch (e) {
+    console.error("Permisos UI error:", e);
+  }
+}
+
+function esAdmin() {
+  return CURRENT_USER?.rol === "admin";
+}
+
 /* ==================== SECCIONES ==================== */
 
 function mostrarSeccion(id) {
+  // Bloqueo local de secciones admin
+  if ((id === "admin-almacen" || id === "usuarios") && !esAdmin()) {
+    alert("No tienes permisos para ver esta sección.");
+    id = "materiales";
+  }
+
   document.querySelectorAll(".seccion").forEach(sec => sec.classList.remove("activa"));
-  document.getElementById(id).classList.add("activa");
+  const target = document.getElementById(id);
+  if (target) target.classList.add("activa");
 
   document.querySelectorAll(".nav-btn").forEach(btn => {
     btn.classList.toggle("activa", btn.dataset.section === id);
@@ -47,13 +91,21 @@ function mostrarSeccion(id) {
 document.querySelectorAll(".nav-btn").forEach(btn => {
   btn.addEventListener("click", () => mostrarSeccion(btn.dataset.section));
 });
+
 /* ==================== USUARIOS ==================== */
 
 async function cargarUsuarios() {
   const res = await apiFetch(`${API_BASE}/users`);
+  if (res.status === 403) {
+    alert("No tienes permisos para ver Usuarios.");
+    mostrarSeccion("materiales");
+    return;
+  }
+
   const data = await res.json();
 
   const tbody = document.querySelector("#tabla-usuarios tbody");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
   if (!data.ok) {
@@ -75,6 +127,12 @@ async function cargarUsuarios() {
 
 document.getElementById("form-usuario")?.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  if (!esAdmin()) {
+    alert("No tienes permisos para crear usuarios.");
+    return;
+  }
+
   const form = e.target;
 
   const payload = {
@@ -89,6 +147,11 @@ document.getElementById("form-usuario")?.addEventListener("submit", async (e) =>
     body: JSON.stringify(payload)
   });
 
+  if (res.status === 403) {
+    alert("No tienes permisos para crear usuarios.");
+    return;
+  }
+
   const data = await res.json();
 
   if (data.ok) {
@@ -100,7 +163,6 @@ document.getElementById("form-usuario")?.addEventListener("submit", async (e) =>
   }
 });
 
-
 /* ==================== MATERIALES ==================== */
 
 async function cargarMateriales() {
@@ -108,6 +170,7 @@ async function cargarMateriales() {
   const data = await res.json();
 
   const tbody = document.querySelector("#tabla-materiales tbody");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
   if (data.ok) {
@@ -126,8 +189,13 @@ async function cargarMateriales() {
   }
 }
 
-document.getElementById("form-material").addEventListener("submit", async e => {
+document.getElementById("form-material")?.addEventListener("submit", async e => {
   e.preventDefault();
+
+  if (!esAdmin()) {
+    alert("No tienes permisos para crear materiales.");
+    return;
+  }
 
   const form = e.target;
   const payload = {
@@ -142,6 +210,11 @@ document.getElementById("form-material").addEventListener("submit", async e => {
     method: "POST",
     body: JSON.stringify(payload)
   });
+
+  if (res.status === 403) {
+    alert("No tienes permisos para crear materiales.");
+    return;
+  }
 
   const data = await res.json();
 
@@ -164,6 +237,7 @@ async function cargarProyectos() {
   const data = await res.json();
 
   const ul = document.getElementById("lista-proyectos");
+  if (!ul) return;
   ul.innerHTML = "";
 
   if (data.ok) {
@@ -180,14 +254,19 @@ async function cargarProyectos() {
 
 function seleccionarProyecto(proyecto) {
   proyectoSeleccionadoId = proyecto.id;
-  document.getElementById("info-proyecto-seleccionado").textContent =
-    `${proyecto.clave} - ${proyecto.nombre}`;
+  const info = document.getElementById("info-proyecto-seleccionado");
+  if (info) info.textContent = `${proyecto.clave} - ${proyecto.nombre}`;
 
   cargarMovimientosDeProyecto(proyecto.id);
 }
 
-document.getElementById("form-proyecto").addEventListener("submit", async e => {
+document.getElementById("form-proyecto")?.addEventListener("submit", async e => {
   e.preventDefault();
+
+  if (!esAdmin()) {
+    alert("No tienes permisos para crear proyectos.");
+    return;
+  }
 
   const form = e.target;
   const payload = {
@@ -202,6 +281,11 @@ document.getElementById("form-proyecto").addEventListener("submit", async e => {
     method: "POST",
     body: JSON.stringify(payload)
   });
+
+  if (res.status === 403) {
+    alert("No tienes permisos para crear proyectos.");
+    return;
+  }
 
   const data = await res.json();
 
@@ -221,6 +305,7 @@ async function cargarMaterialesEnSelectProyecto() {
   const data = await res.json();
 
   const select = document.getElementById("select-material-proyecto");
+  if (!select) return;
   select.innerHTML = "";
 
   if (data.ok) {
@@ -235,10 +320,15 @@ async function cargarMaterialesEnSelectProyecto() {
   }
 }
 
-document.getElementById("form-salida-proyecto").addEventListener("submit", async e => {
+document.getElementById("form-salida-proyecto")?.addEventListener("submit", async e => {
   e.preventDefault();
 
   if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero");
+
+  if (!esAdmin()) {
+    alert("No tienes permisos para asignar material (salida).");
+    return;
+  }
 
   const form = e.target;
   const payload = {
@@ -251,6 +341,11 @@ document.getElementById("form-salida-proyecto").addEventListener("submit", async
     method: "POST",
     body: JSON.stringify(payload)
   });
+
+  if (res.status === 403) {
+    alert("No tienes permisos para asignar material (salida).");
+    return;
+  }
 
   const data = await res.json();
 
@@ -272,6 +367,7 @@ async function cargarMovimientosDeProyecto(idProyecto) {
   const data = await res.json();
 
   const tbody = document.querySelector("#tabla-movimientos-proyecto tbody");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
   if (data.ok) {
@@ -294,10 +390,23 @@ async function cargarMovimientosDeProyecto(idProyecto) {
 /* ==================== ADMIN ALMACÉN ==================== */
 
 async function cargarAdminMateriales() {
+  if (!esAdmin()) {
+    alert("No tienes permisos para Admin Almacén.");
+    mostrarSeccion("materiales");
+    return;
+  }
+
   const res = await apiFetch(`${API_BASE}/materiales`);
+  if (res.status === 403) {
+    alert("No tienes permisos para Admin Almacén.");
+    mostrarSeccion("materiales");
+    return;
+  }
+
   const data = await res.json();
 
   const tbody = document.querySelector("#tabla-admin-materiales tbody");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
   if (!data.ok) {
@@ -330,6 +439,11 @@ async function cargarAdminMateriales() {
 }
 
 async function cargarEditorMaterial(id) {
+  if (!esAdmin()) {
+    alert("No tienes permisos para editar materiales.");
+    return;
+  }
+
   const res = await apiFetch(`${API_BASE}/materiales`);
   const data = await res.json();
 
@@ -342,6 +456,8 @@ async function cargarEditorMaterial(id) {
   if (!mat) return;
 
   const form = document.getElementById("form-editar-material");
+  if (!form) return;
+
   form.dataset.id = id;
 
   form.codigo.value = mat.codigo;
@@ -349,11 +465,17 @@ async function cargarEditorMaterial(id) {
   form.stock_minimo.value = mat.stock_minimo || 0;
   form.ubicacion.value = mat.ubicacion || "";
 
-  document.getElementById("admin-form-panel").style.display = "block";
+  const panel = document.getElementById("admin-form-panel");
+  if (panel) panel.style.display = "block";
 }
 
-document.getElementById("form-editar-material").addEventListener("submit", async e => {
+document.getElementById("form-editar-material")?.addEventListener("submit", async e => {
   e.preventDefault();
+
+  if (!esAdmin()) {
+    alert("No tienes permisos para actualizar materiales.");
+    return;
+  }
 
   const form = e.target;
   const id = form.dataset.id;
@@ -369,6 +491,11 @@ document.getElementById("form-editar-material").addEventListener("submit", async
     body: JSON.stringify(payload)
   });
 
+  if (res.status === 403) {
+    alert("No tienes permisos para actualizar materiales.");
+    return;
+  }
+
   const data = await res.json();
 
   if (data.ok) {
@@ -382,11 +509,16 @@ document.getElementById("form-editar-material").addEventListener("submit", async
 
 /* ==================== AJUSTES DE STOCK ==================== */
 
-document.getElementById("form-ajuste-stock").addEventListener("submit", async e => {
+document.getElementById("form-ajuste-stock")?.addEventListener("submit", async e => {
   e.preventDefault();
 
+  if (!esAdmin()) {
+    alert("No tienes permisos para ajustar stock.");
+    return;
+  }
+
   const form = e.target;
-  const idMaterial = document.getElementById("form-editar-material").dataset.id;
+  const idMaterial = document.getElementById("form-editar-material")?.dataset.id;
 
   const payload = {
     material_id: idMaterial,
@@ -403,6 +535,11 @@ document.getElementById("form-ajuste-stock").addEventListener("submit", async e 
     method: "POST",
     body: JSON.stringify(payload)
   });
+
+  if (res.status === 403) {
+    alert("No tienes permisos para ajustar stock.");
+    return;
+  }
 
   const data = await res.json();
 
@@ -422,6 +559,7 @@ async function cargarMovimientosGlobal() {
   const data = await res.json();
 
   const tbody = document.querySelector("#tabla-movimientos-global tbody");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
   if (data.ok) {
@@ -445,11 +583,21 @@ async function cargarMovimientosGlobal() {
 /* ==================== ELIMINAR MATERIAL / PROYECTO ==================== */
 
 async function eliminarMaterial(id) {
+  if (!esAdmin()) {
+    alert("No tienes permisos para eliminar materiales.");
+    return;
+  }
+
   if (!confirm("¿Estás seguro de que deseas eliminar este material?")) return;
 
   const res = await apiFetch(`${API_BASE}/materiales/${id}`, {
     method: "DELETE"
   });
+
+  if (res.status === 403) {
+    alert("No tienes permisos para eliminar materiales.");
+    return;
+  }
 
   const data = await res.json();
 
@@ -463,11 +611,21 @@ async function eliminarMaterial(id) {
 }
 
 async function eliminarProyecto(id) {
+  if (!esAdmin()) {
+    alert("No tienes permisos para eliminar proyectos.");
+    return;
+  }
+
   if (!confirm("¿Eliminar proyecto?")) return;
 
   const res = await apiFetch(`${API_BASE}/proyectos/${id}`, {
     method: "DELETE"
   });
+
+  if (res.status === 403) {
+    alert("No tienes permisos para eliminar proyectos.");
+    return;
+  }
 
   const data = await res.json();
 
@@ -481,6 +639,9 @@ async function eliminarProyecto(id) {
 
 /* ==================== INICIO ==================== */
 
-cargarMateriales();
-cargarProyectos();
-cargarMaterialesEnSelectProyecto();
+(async () => {
+  await cargarUsuarioActual();
+  cargarMateriales();
+  cargarProyectos();
+  cargarMaterialesEnSelectProyecto();
+})();
