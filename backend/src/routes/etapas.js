@@ -6,17 +6,20 @@ const router = express.Router();
 
 router.use(requireAuth);
 
-// Listar etapas por proyecto
+/* ==================== LISTAR ETAPAS ==================== */
+/* Nota: tu tabla no tiene creado_en/cerrado_en, así que no los pedimos */
 router.get("/proyectos/:id/etapas", async (req, res) => {
   try {
     const proyectoId = Number(req.params.id);
+
     const [rows] = await pool.query(
-      `SELECT id, proyecto_id, nombre, estado, creado_en, cerrado_en
+      `SELECT id, proyecto_id, nombre, estado
        FROM proyecto_etapas
        WHERE proyecto_id = ?
        ORDER BY id DESC`,
       [proyectoId]
     );
+
     res.json({ ok: true, etapas: rows });
   } catch (err) {
     console.error("❌ listar etapas:", err);
@@ -24,10 +27,11 @@ router.get("/proyectos/:id/etapas", async (req, res) => {
   }
 });
 
-// Etapa activa
+/* ==================== ETAPA ACTIVA ==================== */
 router.get("/proyectos/:id/etapas/activa", async (req, res) => {
   try {
     const proyectoId = Number(req.params.id);
+
     const [rows] = await pool.query(
       `SELECT id, proyecto_id, nombre, estado
        FROM proyecto_etapas
@@ -36,6 +40,7 @@ router.get("/proyectos/:id/etapas/activa", async (req, res) => {
        LIMIT 1`,
       [proyectoId]
     );
+
     res.json({ ok: true, etapa: rows[0] || null });
   } catch (err) {
     console.error("❌ etapa activa:", err);
@@ -43,24 +48,26 @@ router.get("/proyectos/:id/etapas/activa", async (req, res) => {
   }
 });
 
-// Crear etapa (admin)
+/* ==================== CREAR ETAPA (ADMIN) ==================== */
 router.post("/proyectos/:id/etapas", requireRole("admin"), async (req, res) => {
   try {
     const proyectoId = Number(req.params.id);
     const { nombre } = req.body;
+
     if (!nombre) return res.status(400).json({ ok: false, message: "Nombre requerido" });
 
-    // cerrar etapas activas previas
+    // Cierra cualquier etapa activa previa (sin usar cerrado_en)
     await pool.query(
       `UPDATE proyecto_etapas
-       SET estado = 'CERRADA', cerrado_en = NOW()
+       SET estado = 'CERRADA'
        WHERE proyecto_id = ? AND estado = 'ACTIVA'`,
       [proyectoId]
     );
 
+    // Crea nueva etapa activa
     await pool.query(
-      `INSERT INTO proyecto_etapas (proyecto_id, nombre, estado, creado_en)
-       VALUES (?, ?, 'ACTIVA', NOW())`,
+      `INSERT INTO proyecto_etapas (proyecto_id, nombre, estado)
+       VALUES (?, ?, 'ACTIVA')`,
       [proyectoId, nombre]
     );
 
@@ -71,14 +78,14 @@ router.post("/proyectos/:id/etapas", requireRole("admin"), async (req, res) => {
   }
 });
 
-// Cerrar etapa (admin)
+/* ==================== CERRAR ETAPA (ADMIN) ==================== */
 router.post("/etapas/:etapaId/cerrar", requireRole("admin"), async (req, res) => {
   try {
     const etapaId = Number(req.params.etapaId);
 
     await pool.query(
       `UPDATE proyecto_etapas
-       SET estado = 'CERRADA', cerrado_en = NOW()
+       SET estado = 'CERRADA'
        WHERE id = ?`,
       [etapaId]
     );
