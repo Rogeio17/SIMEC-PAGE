@@ -10,6 +10,9 @@ import movimientoRoutes from "./routes/movimientos.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
+import proveedoresRoutes from "./routes/proveedores.js";
+import etapasRoutes from "./routes/etapas.js";
+
 
 const app = express();
 
@@ -32,6 +35,8 @@ app.use("/api/proyectos", proyectoRoutes);
 app.use("/api/movimientos", movimientoRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/proveedores", proveedoresRoutes);
+app.use("/api", etapasRoutes); // deja así porque etapas.js incluye /proyectos/:id/etapas
 
 app.get("/", (_req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));

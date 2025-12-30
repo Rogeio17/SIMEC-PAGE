@@ -1,147 +1,166 @@
-
 import pool from "../config/db.js";
 
-
-export const crearMaterial = async (req, res) => {
+export async function listarMateriales(_req, res) {
   try {
-    const { codigo, nombre, descripcion, stock_inicial, stock_minimo, ubicacion } = req.body;
+    const [rows] = await pool.query(
+      `SELECT
+         m.id, m.codigo, m.nombre, m.stock_actual, m.stock_minimo, m.ubicacion,
+         m.activo, m.creado_en,
+         m.proveedor_id, p.nombre AS proveedor_nombre,
+         m.ticket_numero, m.requiere_protocolo, m.protocolo_texto,
+         m.precio_unitario,
+         m.creado_por_usuario_id, m.actualizado_por_usuario_id
+       FROM materiales m
+       LEFT JOIN proveedores p ON p.id = m.proveedor_id
+       WHERE m.activo = 1
+       ORDER BY m.id DESC`
+    );
+
+    res.json({ ok: true, materiales: rows });
+  } catch (err) {
+    console.error("❌ listarMateriales:", err);
+    res.status(500).json({ ok: false, message: "Error al obtener materiales" });
+  }
+}
+
+export async function crearMaterial(req, res) {
+  try {
+    const {
+      codigo,
+      nombre,
+      stock_inicial = 0,
+      stock_minimo = 0,
+      ubicacion = null,
+
+      proveedor_id = null,
+      ticket_numero = null,
+      requiere_protocolo = 0,
+      protocolo_texto = null,
+      precio_unitario = null,
+    } = req.body;
 
     if (!codigo || !nombre) {
-      return res.status(400).json({ ok: false, message: "Código y nombre son obligatorios" });
+      return res.status(400).json({ ok: false, message: "Código y nombre son requeridos" });
     }
 
-    const [result] = await pool.query(
-      `INSERT INTO materiales (codigo, nombre, descripcion, stock_actual, stock_minimo, ubicacion)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+    const reqProto = Number(requiere_protocolo) === 1 ? 1 : 0;
+    const protoText = reqProto ? (protocolo_texto || null) : null;
+
+    // Evitar duplicado por código
+    const [existe] = await pool.query(
+      "SELECT id FROM materiales WHERE codigo = ? LIMIT 1",
+      [codigo]
+    );
+    if (existe.length) {
+      return res.status(409).json({ ok: false, message: "Ese código ya existe" });
+    }
+
+    await pool.query(
+      `INSERT INTO materiales
+        (codigo, nombre, stock_actual, stock_minimo, ubicacion, activo, creado_en,
+         proveedor_id, ticket_numero, requiere_protocolo, protocolo_texto, precio_unitario,
+         creado_por_usuario_id, actualizado_por_usuario_id)
+       VALUES (?, ?, ?, ?, ?, 1, NOW(),
+               ?, ?, ?, ?, ?,
+               ?, ?)`,
       [
         codigo,
         nombre,
-        descripcion || "",
-        stock_inicial || 0,
-        stock_minimo || 0,
-        ubicacion || ""
+        Number(stock_inicial) || 0,
+        Number(stock_minimo) || 0,
+        ubicacion,
+
+        proveedor_id ? Number(proveedor_id) : null,
+        ticket_numero || null,
+        reqProto,
+        protoText,
+        precio_unitario !== "" && precio_unitario !== null ? Number(precio_unitario) : null,
+
+        req.user?.id ?? null,
+        req.user?.id ?? null,
       ]
     );
 
-    res.json({ ok: true, id: result.insertId });
-
-  } catch (error) {
-    console.error("❌ Error crearMaterial:", error);
+    res.json({ ok: true, message: "Material creado" });
+  } catch (err) {
+    console.error("❌ crearMaterial:", err);
     res.status(500).json({ ok: false, message: "Error al crear material" });
   }
-};
+}
 
-
-export const listarMateriales = async (_req, res) => {
+export async function actualizarMaterial(req, res) {
   try {
-    const [rows] = await pool.query(`SELECT * FROM materiales WHERE activo = 1`);
-    res.json({ ok: true, materiales: rows });
-  } catch (error) {
-    console.error("❌ Error listarMateriales:", error);
-    res.status(500).json({ ok: false, message: "Error al obtener materiales" });
-  }
-};
+    const id = Number(req.params.id);
 
+    const {
+      nombre,
+      stock_minimo = 0,
+      ubicacion = null,
 
-export const actualizarMaterial = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { nombre, descripcion, stock_minimo, ubicacion, activo } = req.body;
+      proveedor_id = null,
+      ticket_numero = null,
+      requiere_protocolo = 0,
+      protocolo_texto = null,
+      precio_unitario = null,
+    } = req.body;
+
+    const reqProto = Number(requiere_protocolo) === 1 ? 1 : 0;
+    const protoText = reqProto ? (protocolo_texto || null) : null;
 
     await pool.query(
       `UPDATE materiales
-       SET nombre = ?, descripcion = ?, stock_minimo = ?, ubicacion = ?, activo = ?
+       SET nombre = ?,
+           stock_minimo = ?,
+           ubicacion = ?,
+           proveedor_id = ?,
+           ticket_numero = ?,
+           requiere_protocolo = ?,
+           protocolo_texto = ?,
+           precio_unitario = ?,
+           actualizado_por_usuario_id = ?
        WHERE id = ?`,
-      [nombre, descripcion, stock_minimo, ubicacion, activo ?? 1, id]
+      [
+        nombre,
+        Number(stock_minimo) || 0,
+        ubicacion,
+
+        proveedor_id ? Number(proveedor_id) : null,
+        ticket_numero || null,
+        reqProto,
+        protoText,
+        precio_unitario !== "" && precio_unitario !== null ? Number(precio_unitario) : null,
+
+        req.user?.id ?? null,
+        id,
+      ]
     );
 
-    res.json({ ok: true });
-
-  } catch (error) {
-    console.error("❌ Error actualizarMaterial:", error);
+    res.json({ ok: true, message: "Material actualizado" });
+  } catch (err) {
+    console.error("❌ actualizarMaterial:", err);
     res.status(500).json({ ok: false, message: "Error al actualizar material" });
   }
-};
+}
 
-export const entradaMaterial = async (req, res) => {
+/**
+ * Mejor práctica: NO borrar físico, marcar activo=0
+ * (así se conserva histórico)
+ */
+export async function eliminarMaterial(req, res) {
   try {
-    const { id, cantidad } = req.body;
+    const id = Number(req.params.id);
 
-    if (!id || !cantidad) {
-      return res.status(400).json({ ok: false, message: "Datos incompletos" });
-    }
-
-    // Aumentar stock
     await pool.query(
-      `UPDATE materiales SET stock_actual = stock_actual + ? WHERE id = ?`,
-      [cantidad, id]
+      `UPDATE materiales
+       SET activo = 0,
+           actualizado_por_usuario_id = ?
+       WHERE id = ?`,
+      [req.user?.id ?? null, id]
     );
 
-    // Registrar movimiento
-    await pool.query(
-      `INSERT INTO movimientos (id_material, tipo, cantidad, fecha)
-       VALUES (?, 'entrada', ?, NOW())`,
-      [id, cantidad]
-    );
-
-    res.json({ ok: true });
-
-  } catch (error) {
-    console.error("❌ Error entradaMaterial:", error);
-    res.status(500).json({ ok: false, message: "Error al registrar entrada" });
+    res.json({ ok: true, message: "Material desactivado" });
+  } catch (err) {
+    console.error("❌ eliminarMaterial:", err);
+    res.status(500).json({ ok: false, message: "Error al eliminar material" });
   }
-};
-export const salidaMaterial = async (req, res) => {
-  try {
-    const { id, cantidad } = req.body;
-
-    if (!id || !cantidad) {
-      return res.status(400).json({ ok: false, message: "Datos incompletos" });
-    }
-
-    // Disminuir stock
-    await pool.query(
-      `UPDATE materiales SET stock_actual = stock_actual - ? WHERE id = ?`,
-      [cantidad, id]
-    );
-
-    // Registrar movimiento
-    await pool.query(
-      `INSERT INTO movimientos (id_material, tipo, cantidad, fecha)
-       VALUES (?, 'salida', ?, NOW())`,
-      [id, cantidad]
-    );
-
-    res.json({ ok: true });
-
-  } catch (error) {
-    console.error("❌ Error salidaMaterial:", error);
-    res.status(500).json({ ok: false, message: "Error al registrar salida" });
-  }
-};
-
-export const eliminarMaterial = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    await pool.query(
-      "UPDATE materiales SET activo = 0 WHERE id = ?",
-      [id]
-    );
-
-    // Registrar movimiento (opcional pero recomendado)
-    await pool.query(
-      "INSERT INTO movimientos (tipo, descripcion) VALUES (?, ?)",
-      ["ELIMINACION", `Material ID ${id} eliminado`]
-    );
-
-    res.json({ success: true, message: "Material eliminado correctamente" });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Error al eliminar material" });
-  }
-};
-
-
-
+}
