@@ -275,17 +275,39 @@
           <div class="card">
             <div class="card-header">
               <h4>Materiales del proyecto</h4>
-              <p class="small">Proyecto seleccionado: <span id="info-proyecto-seleccionado">Ninguno</span></p>
-            </div>
+              <p class="small">
+  Proyecto seleccionado:
+  <span id="info-proyecto-seleccionado">Ninguno</span>
+</p>
+</div>
 
-            <!-- ETAPAS -->
-            <div class="card-body">
-              <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
-                <strong>Etapa activa:</strong> <span id="etapa-activa-texto">—</span>
-                <button class="btn-secondary" type="button" id="btn-crear-etapa">Crear etapa</button>
-                <button class="btn-secondary" type="button" id="btn-cerrar-etapa">Cerrar etapa</button>
-              </div>
-            </div>
+<!-- ETAPAS -->
+<div class="card-body">
+  <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px;">
+
+    <strong>Etapa activa:</strong>
+    <span id="etapa-activa-texto">—</span>
+
+    <label style="margin-left:10px;">Ver etapa:</label>
+    <select id="select-etapa" style="min-width:220px;">
+      <option value="__ALL__">Todas</option>
+    </select>
+
+    <button class="btn-secondary" type="button" id="btn-crear-etapa">
+      Crear etapa
+    </button>
+
+    <button class="btn-secondary" type="button" id="btn-cerrar-etapa">
+      Cerrar etapa
+    </button>
+
+  </div>
+
+  <div id="etapas-resumen" class="small" style="opacity:.85;">
+    <!-- aquí se mostrará el resumen de etapas -->
+  </div>
+</div>
+
 
             <div class="card-body">
               <form id="form-salida-proyecto" class="form form-inline">

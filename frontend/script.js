@@ -287,6 +287,7 @@ document.getElementById("form-material")?.addEventListener("submit", async e => 
 
 let proyectoSeleccionadoId = null;
 let etapaActivaId = null;
+let etapaSeleccionadaId = "__ALL__"; // "__ALL__" o id numérico
 
 async function cargarProyectos() {
   const res = await apiFetch(`${API_BASE}/proyectos`);
@@ -342,15 +343,26 @@ async function cargarProyectos() {
   });
 }
 
-function seleccionarProyecto(proyecto) {
+async function seleccionarProyecto(proyecto) {
   proyectoSeleccionadoId = proyecto.id;
 
   document.getElementById("info-proyecto-seleccionado").textContent =
     `${proyecto.clave} - ${proyecto.nombre}`;
 
-  cargarEtapaActiva(proyecto.id);
-  cargarMovimientosDeProyecto(proyecto.id);
+  // Por defecto mostrar todas las etapas
+  etapaSeleccionadaId = "__ALL__";
+
+  const selectEtapa = document.getElementById("select-etapa");
+  if (selectEtapa) selectEtapa.value = "__ALL__";
+
+  // Cargar datos del proyecto
+  await cargarEtapaActiva(proyecto.id);
+  await cargarEtapasProyecto(proyecto.id);
+
+  // Mostrar movimientos según etapa seleccionada
+  await refrescarMovimientosProyecto();
 }
+
 
 document.getElementById("form-proyecto")?.addEventListener("submit", async e => {
   e.preventDefault();
@@ -382,13 +394,17 @@ document.getElementById("form-proyecto")?.addEventListener("submit", async e => 
   }
 });
 
-/* ==================== ETAPAS ==================== */
 
+/* ==================== ETAPAS (PROYECTOS) ==================== */
+
+
+// Obtener la etapa activa del proyecto
 async function cargarEtapaActiva(proyectoId) {
   const res = await apiFetch(`${API_BASE}/proyectos/${proyectoId}/etapas/activa`);
   const data = await res.json();
 
   const txt = document.getElementById("etapa-activa-texto");
+
   if (!data.ok || !data.etapa) {
     etapaActivaId = null;
     if (txt) txt.textContent = "—";
@@ -399,42 +415,95 @@ async function cargarEtapaActiva(proyectoId) {
   if (txt) txt.textContent = data.etapa.nombre;
 }
 
-document.getElementById("btn-crear-etapa")?.addEventListener("click", async () => {
-  if (!esAdmin()) return alert("Solo admin puede crear etapas.");
-  if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero");
+// Cargar TODAS las etapas (activas y cerradas) en el select
+async function cargarEtapasProyecto(proyectoId) {
+  const res = await apiFetch(`${API_BASE}/proyectos/${proyectoId}/etapas`);
+  const data = await res.json();
 
-  const nombre = prompt("Nombre de la nueva etapa:");
-  if (!nombre) return;
+  const select = document.getElementById("select-etapa");
+  const resumen = document.getElementById("etapas-resumen");
 
-  const res = await apiFetch(`${API_BASE}/proyectos/${proyectoSeleccionadoId}/etapas`, {
-    method: "POST",
-    body: JSON.stringify({ nombre })
+  if (!select) return;
+
+  // Reset del select
+  select.innerHTML = `<option value="__ALL__">Todas</option>`;
+
+  if (!data.ok) {
+    if (resumen) resumen.textContent = "No se pudieron cargar etapas.";
+    return;
+  }
+
+  // Llenar select con etapas
+  data.etapas.forEach(et => {
+    const opt = document.createElement("option");
+    opt.value = String(et.id);
+    opt.textContent = `${et.nombre} (${et.estado})`;
+    select.appendChild(opt);
   });
 
-  const data = await res.json();
-  if (data.ok) {
-    alert("Etapa creada");
-    await cargarEtapaActiva(proyectoSeleccionadoId);
-  } else {
-    alert(data.message || "Error al crear etapa");
+  // Mantener selección actual
+  select.value = String(etapaSeleccionadaId);
+
+  // Resumen visual
+  if (resumen) {
+    const total = data.etapas.length;
+    const activas = data.etapas.filter(e => e.estado === "ACTIVA").length;
+    const cerradas = data.etapas.filter(e => e.estado === "CERRADA").length;
+    resumen.textContent = `Etapas: ${total} · Activas: ${activas} · Cerradas: ${cerradas}`;
   }
-});
 
-document.getElementById("btn-cerrar-etapa")?.addEventListener("click", async () => {
-  if (!esAdmin()) return alert("Solo admin puede cerrar etapas.");
-  if (!etapaActivaId) return alert("No hay etapa activa");
+  // Evento al cambiar de etapa
+  select.onchange = async () => {
+    etapaSeleccionadaId = select.value;
+    await refrescarMovimientosProyecto();
+  };
+}
 
-  const res = await apiFetch(`${API_BASE}/etapas/${etapaActivaId}/cerrar`, { method: "POST" });
-  const data = await res.json();
+// Decide si mostrar todas las etapas o solo una
+async function refrescarMovimientosProyecto() {
+  if (!proyectoSeleccionadoId) return;
 
-  if (data.ok) {
-    alert("Etapa cerrada");
-    etapaActivaId = null;
-    document.getElementById("etapa-activa-texto").textContent = "—";
+  if (etapaSeleccionadaId === "__ALL__") {
+    await cargarMovimientosDeProyecto(proyectoSeleccionadoId);
   } else {
-    alert(data.message || "Error al cerrar etapa");
+    await cargarMovimientosDeProyectoPorEtapa(
+      proyectoSeleccionadoId,
+      etapaSeleccionadaId
+    );
   }
-});
+}
+
+// Cargar movimientos SOLO de una etapa
+async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
+  const res = await apiFetch(
+    `${API_BASE}/movimientos/proyecto/${proyectoId}/etapa/${etapaId}/movimientos`
+  );
+
+  const data = await res.json();
+  const tbody = document.querySelector("#tabla-movimientos-proyecto tbody");
+
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (!data.ok) {
+    alert(data.message || "Error al cargar movimientos de la etapa");
+    return;
+  }
+
+  data.movimientos.forEach(mv => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${new Date(mv.creado_en).toLocaleString()}</td>
+      <td>${mv.codigo} - ${mv.nombre}</td>
+      <td>${mv.tipo}</td>
+      <td>${mv.cantidad}</td>
+      <td>${mv.comentario || ""}</td>
+      <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
 
 /* ==================== MATERIALES EN PROYECTO ==================== */
 
