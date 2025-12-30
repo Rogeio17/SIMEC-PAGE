@@ -7,29 +7,32 @@ import {
   listarMovimientosGlobal,
   registrarSalida,
   listarMovimientosPorProyecto,
-  ajustarMovimiento,
+  listarMovimientosPorProyectoYEtapa, // ✅ IMPORTANTE
+  ajustarMovimiento
 } from "../controllers/movimientosController.js";
 
 const router = express.Router();
 
-router.get("/proyecto/:id/etapa/:etapaId/movimientos", listarMovimientosPorProyectoYEtapa);
-
-
-// 🔒 Todo movimientos requiere login
+// ✅ Todo movimientos requiere login
 router.use(requireAuth);
 
-// ✅ Cualquiera logueado puede VER movimientos
-router.get("/", listarMovimientosGlobal);
-router.get("/proyecto/:id/movimientos", listarMovimientosPorProyecto);
-
-// 🔒 Solo admin puede registrar entrada/salida general
+// Entradas/Salidas generales (solo admin)
 router.post("/entrada", requireRole("admin"), registrarEntradaGeneral);
 router.post("/salida", requireRole("admin"), registrarSalidaGeneral);
 
-// 🔒 Salida a proyecto: SOLO admin (porque mueve stock)
+// Movimientos globales
+router.get("/", listarMovimientosGlobal);
+
+// Salida a proyecto (solo admin si así lo quieres)
 router.post("/proyecto/:id/salida", requireRole("admin"), registrarSalida);
 
-// 🔒 Ajustes: SOLO admin
-router.post("/ajustar/:movimiento_id", requireRole("admin"), ajustarMovimiento);
+// Movimientos de un proyecto (todas las etapas)
+router.get("/proyecto/:id/movimientos", listarMovimientosPorProyecto);
+
+// ✅ Movimientos de un proyecto filtrados por etapa
+router.get("/proyecto/:id/etapa/:etapaId/movimientos", listarMovimientosPorProyectoYEtapa);
+
+// Si tienes este endpoint, déjalo
+router.post("/ajustar/:movimiento_id", ajustarMovimiento);
 
 export default router;
