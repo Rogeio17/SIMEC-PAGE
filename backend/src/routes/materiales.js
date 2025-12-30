@@ -1,4 +1,5 @@
 import express from "express";
+import { requiereAutch, requiereRole} from "../middlewares/auth.js";
 import {
   crearMaterial,
   listarMateriales,
@@ -15,12 +16,13 @@ import {
 
 const router = express.Router();
 
+router.use(requiereAutch);
 
-router.post("/", crearMaterial);     
-router.get("/", listarMateriales);    
-router.put("/:id", actualizarMaterial); 
-router.put("/eliminar/:id", eliminarMaterial);
+router.get("/", listarMateriales); 
 
+router.post("/", requireRole("admin"), crearMaterial);
+router.put("/:id", requireRole("admin"), actualizarMaterial);
+router.delete("/:id", requireRole("admin"), eliminarMaterial);
 
 router.post("/entrada", registrarEntradaGeneral);  
 router.post("/salida", registrarSalidaGeneral);    

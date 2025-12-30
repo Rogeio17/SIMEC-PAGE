@@ -1,4 +1,6 @@
 import express from "express";
+import { requireAuth, requireRole } from "../middlewares/auth.js";
+
 import {
   crearProyecto,
   listarProyectos,
@@ -14,9 +16,12 @@ const router = express.Router();
 router.post("/", crearProyecto);
 router.get("/", listarProyectos);
 router.put("/eliminar/:id", eliminarProyecto);
+router.use(requireAuth);
+router.get("/", listarProyectos);
 
 /* ----------- MATERIALES DEL PROYECTO ----------- */
 router.get("/:id/materiales", obtenerMaterialesDeProyecto);
+router.post("/", requireRole("admin"), crearProyecto);
 
 export default router;
 
