@@ -1,7 +1,5 @@
 import pool from "../config/db.js";
 
-/* ==================== ENTRADA / SALIDA GENERAL ==================== */
-
 export async function registrarEntradaGeneral(req, res) {
   try {
     const { material_id, cantidad, comentario = null } = req.body;
@@ -66,8 +64,6 @@ export async function registrarSalidaGeneral(req, res) {
   }
 }
 
-/* ==================== MOVIMIENTOS (LISTADOS) ==================== */
-
 export async function listarMovimientosGlobal(_req, res) {
   try {
     const [rows] = await pool.query(
@@ -79,7 +75,7 @@ export async function listarMovimientosGlobal(_req, res) {
          u.email AS usuario_email
        FROM movimientos mv
        JOIN materiales mat ON mat.id = mv.material_id
-       LEFT JOIN users u ON u.id = mv.usuario_id
+       LEFT JOIN usuarios u ON u.id = mv.usuario_id
        ORDER BY mv.id DESC`
     );
 
@@ -103,7 +99,7 @@ export async function listarMovimientosPorProyecto(req, res) {
          u.email  AS usuario_email
        FROM movimientos mv
        JOIN materiales mat ON mat.id = mv.material_id
-       LEFT JOIN users u ON u.id = mv.usuario_id
+       LEFT JOIN usuarios u ON u.id = mv.usuario_id
        WHERE mv.proyecto_id = ?
        ORDER BY mv.id DESC`,
       [proyectoId]
@@ -130,7 +126,7 @@ export async function listarMovimientosPorProyectoYEtapa(req, res) {
          u.email  AS usuario_email
        FROM movimientos mv
        JOIN materiales mat ON mat.id = mv.material_id
-       LEFT JOIN users u ON u.id = mv.usuario_id
+       LEFT JOIN usuarios u ON u.id = mv.usuario_id
        WHERE mv.proyecto_id = ? AND mv.etapa_id = ?
        ORDER BY mv.id DESC`,
       [proyectoId, etapaId]
@@ -143,8 +139,6 @@ export async function listarMovimientosPorProyectoYEtapa(req, res) {
   }
 }
 
-/* ==================== SALIDA A PROYECTO (CON ETAPA) ==================== */
-
 export async function registrarSalida(req, res) {
   try {
     const proyectoId = Number(req.params.id);
@@ -154,7 +148,6 @@ export async function registrarSalida(req, res) {
       return res.status(400).json({ ok: false, message: "material_id y cantidad requeridos" });
     }
 
-    // validar proyecto
     const [proj] = await pool.query(
       "SELECT id, estado FROM proyectos WHERE id = ? LIMIT 1",
       [proyectoId]
@@ -164,7 +157,6 @@ export async function registrarSalida(req, res) {
       return res.status(400).json({ ok: false, message: "El proyecto está finalizado" });
     }
 
-    // validar etapa
     if (!etapa_id) return res.status(400).json({ ok: false, message: "Debe indicar etapa_id" });
 
     const etapaId = Number(etapa_id);
@@ -180,7 +172,6 @@ export async function registrarSalida(req, res) {
       return res.status(400).json({ ok: false, message: "La etapa no está activa" });
     }
 
-    // validar stock material
     const matId = Number(material_id);
     const qty = Number(cantidad);
 
@@ -190,14 +181,12 @@ export async function registrarSalida(req, res) {
       return res.status(400).json({ ok: false, message: "Stock insuficiente" });
     }
 
-    // registrar movimiento
     await pool.query(
       `INSERT INTO movimientos (material_id, tipo, cantidad, comentario, proyecto_id, etapa_id, usuario_id, creado_en)
        VALUES (?, 'salida', ?, ?, ?, ?, ?, NOW())`,
       [matId, qty, comentario, proyectoId, etapaId, req.user?.id ?? null]
     );
 
-    // actualizar stock
     await pool.query(
       `UPDATE materiales SET stock_actual = stock_actual - ? WHERE id = ?`,
       [qty, matId]
@@ -210,9 +199,6 @@ export async function registrarSalida(req, res) {
   }
 }
 
-/* ==================== AJUSTE (ENDPOINT DE COMPATIBILIDAD) ==================== */
-/* Lo dejo para que NO vuelva a fallar por missing export.
-   Si tú no lo usas, no pasa nada. */
 export async function ajustarMovimiento(_req, res) {
   return res.status(501).json({ ok: false, message: "ajustarMovimiento no implementado (compatibilidad)" });
 }

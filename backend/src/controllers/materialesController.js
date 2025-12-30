@@ -17,8 +17,8 @@ export async function listarMateriales(_req, res) {
          u2.email  AS actualizado_por_email
        FROM materiales m
        LEFT JOIN proveedores p ON p.id = m.proveedor_id
-       LEFT JOIN users u1 ON u1.id = m.creado_por_usuario_id
-       LEFT JOIN users u2 ON u2.id = m.actualizado_por_usuario_id
+       LEFT JOIN usuarios u1 ON u1.id = m.creado_por_usuario_id
+       LEFT JOIN usuarios u2 ON u2.id = m.actualizado_por_usuario_id
        WHERE m.activo = 1
        ORDER BY m.id DESC`
     );
@@ -38,7 +38,6 @@ export async function crearMaterial(req, res) {
       stock_inicial = 0,
       stock_minimo = 0,
       ubicacion = null,
-
       proveedor_id = null,
       ticket_numero = null,
       requiere_protocolo = 0,
@@ -75,13 +74,11 @@ export async function crearMaterial(req, res) {
         Number(stock_inicial) || 0,
         Number(stock_minimo) || 0,
         ubicacion,
-
         proveedor_id ? Number(proveedor_id) : null,
         ticket_numero || null,
         reqProto,
         protoText,
         precio_unitario !== "" && precio_unitario !== null ? Number(precio_unitario) : null,
-
         req.user?.id ?? null,
         req.user?.id ?? null,
       ]
@@ -102,7 +99,6 @@ export async function actualizarMaterial(req, res) {
       nombre,
       stock_minimo = 0,
       ubicacion = null,
-
       proveedor_id = null,
       ticket_numero = null,
       requiere_protocolo = 0,
@@ -129,13 +125,11 @@ export async function actualizarMaterial(req, res) {
         nombre,
         Number(stock_minimo) || 0,
         ubicacion,
-
         proveedor_id ? Number(proveedor_id) : null,
         ticket_numero || null,
         reqProto,
         protoText,
         precio_unitario !== "" && precio_unitario !== null ? Number(precio_unitario) : null,
-
         req.user?.id ?? null,
         id,
       ]
