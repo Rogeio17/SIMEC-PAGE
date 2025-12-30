@@ -21,14 +21,156 @@ async function apiFetch(url, options = {}) {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  const res = await fetch(url, { ...options, headers });
+  let res;
+  try {
+    res = await fetch(url, { ...options, headers });
+  } catch (e) {
+    alert("No hay conexión con el servidor.");
+    throw e;
+  }
 
-  // Si el backend exige login y no hay token o expiró
   if (res.status === 401) logout();
-
   return res;
 }
-// Descargar archivo (Excel/PDF)
+
+/* ==================== PERMISOS UI ==================== */
+
+let CURRENT_USER = null;
+
+async function cargarUsuarioActual() {
+  try {
+    const res = await apiFetch(`${API_BASE}/auth/me`);
+    if (!res.ok) return;
+
+    const data = await res.json();
+    if (!data.ok) return;
+
+    CURRENT_USER = data.user;
+
+    // Ocultar botones si no es admin
+    if (!esAdmin()) {
+      const btnAdminAlmacen = document.querySelector('.nav-btn[data-section="admin-almacen"]');
+      const btnUsuarios = document.querySelector('.nav-btn[data-section="usuarios"]');
+
+      if (btnAdminAlmacen) btnAdminAlmacen.style.display = "none";
+      if (btnUsuarios) btnUsuarios.style.display = "none";
+
+      // Ocultar form nuevo proyecto
+      const formProyecto = document.getElementById("form-proyecto");
+      if (formProyecto) {
+        const footer = formProyecto.closest(".card-footer");
+        if (footer) footer.style.display = "none";
+      }
+
+      // Ocultar creación de proveedor
+      const btnNuevoProv = document.getElementById("btn-nuevo-proveedor");
+      const panelNuevoProv = document.getElementById("panel-nuevo-proveedor");
+      if (btnNuevoProv) btnNuevoProv.style.display = "none";
+      if (panelNuevoProv) panelNuevoProv.style.display = "none";
+
+      // Ocultar botones de etapas (crear/cerrar)
+      const btnCrearEtapa = document.getElementById("btn-crear-etapa");
+      const btnCerrarEtapa = document.getElementById("btn-cerrar-etapa");
+      if (btnCrearEtapa) btnCrearEtapa.style.display = "none";
+      if (btnCerrarEtapa) btnCerrarEtapa.style.display = "none";
+    }
+  } catch (e) {
+    console.error("No se pudo cargar /auth/me:", e);
+  }
+}
+
+function esAdmin() {
+  return CURRENT_USER?.rol === "admin";
+}
+
+/* ==================== PROVEEDORES + PROTOCOLO ==================== */
+
+async function cargarProveedoresEnSelect(selectEl) {
+  if (!selectEl) return;
+
+  const res = await apiFetch(`${API_BASE}/proveedores`);
+  const data = await res.json();
+
+  selectEl.innerHTML = "";
+
+  const opt0 = document.createElement("option");
+  opt0.value = "";
+  opt0.textContent = "— Sin proveedor —";
+  selectEl.appendChild(opt0);
+
+  if (!data.ok) return;
+
+  data.proveedores.forEach(p => {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = p.nombre;
+    selectEl.appendChild(opt);
+  });
+}
+
+function setupProtocoloToggle(selectId, inputId) {
+  const sel = document.getElementById(selectId);
+  const inp = document.getElementById(inputId);
+  if (!sel || !inp) return;
+
+  const apply = () => {
+    const yes = String(sel.value) === "1";
+    inp.disabled = !yes;
+    if (!yes) inp.value = "";
+  };
+
+  sel.addEventListener("change", apply);
+  apply();
+}
+
+function setupProveedorUI() {
+  const btnNuevo = document.getElementById("btn-nuevo-proveedor");
+  const panel = document.getElementById("panel-nuevo-proveedor");
+  const btnGuardar = document.getElementById("btn-guardar-proveedor");
+
+  if (btnNuevo && panel) {
+    btnNuevo.onclick = () => {
+      panel.style.display = panel.style.display === "none" ? "block" : "none";
+    };
+  }
+
+  if (btnGuardar) {
+    btnGuardar.onclick = async () => {
+      if (!esAdmin()) return alert("Solo admin puede crear proveedores.");
+
+      const nombre = document.getElementById("prov-nombre")?.value?.trim();
+      const telefono = document.getElementById("prov-telefono")?.value?.trim() || null;
+      const email = document.getElementById("prov-email")?.value?.trim() || null;
+      const notas = document.getElementById("prov-notas")?.value?.trim() || null;
+
+      if (!nombre) return alert("Nombre proveedor es requerido");
+
+      const res = await apiFetch(`${API_BASE}/proveedores`, {
+        method: "POST",
+        body: JSON.stringify({ nombre, telefono, email, notas })
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        alert("Proveedor creado");
+        document.getElementById("prov-nombre").value = "";
+        document.getElementById("prov-telefono").value = "";
+        document.getElementById("prov-email").value = "";
+        document.getElementById("prov-notas").value = "";
+        document.getElementById("panel-nuevo-proveedor").style.display = "none";
+
+        await cargarProveedoresEnSelect(document.getElementById("select-proveedor-material"));
+        await cargarProveedoresEnSelect(document.getElementById("select-proveedor-editar"));
+      } else {
+        alert(data.message || "Error al crear proveedor");
+      }
+    };
+  }
+}
+
+/* ==================== EXPORT (Excel/PDF) ==================== */
+
 async function descargarArchivo(url, nombreArchivo) {
   const res = await apiFetch(url);
 
@@ -52,64 +194,17 @@ async function descargarArchivo(url, nombreArchivo) {
   a.remove();
   URL.revokeObjectURL(objectUrl);
 }
-document.getElementById("btn-export-materiales-excel")?.addEventListener("click", () => {
-  descargarArchivo(`${API_BASE}/materiales/export/excel`, "materiales.xlsx");
-});
-
-document.getElementById("btn-export-materiales-pdf")?.addEventListener("click", () => {
-  descargarArchivo(`${API_BASE}/materiales/export/pdf`, "materiales.pdf");
-});
-
-
-/* ==================== PERMISOS UI ==================== */
-
-let CURRENT_USER = null;
-
-async function cargarUsuarioActual() {
-  try {
-    const res = await apiFetch(`${API_BASE}/auth/me`);
-    const data = await res.json();
-    if (!data.ok) return;
-
-    CURRENT_USER = data.user;
-    const esAdmin = CURRENT_USER?.rol === "admin";
-
-    // Ocultar botones del sidebar si no es admin
-    const btnAdminAlmacen = document.querySelector('.nav-btn[data-section="admin-almacen"]');
-    const btnUsuarios = document.querySelector('.nav-btn[data-section="usuarios"]');
-
-    if (!esAdmin) {
-      if (btnAdminAlmacen) btnAdminAlmacen.style.display = "none";
-      if (btnUsuarios) btnUsuarios.style.display = "none";
-
-      // Ocultar bloque "Nuevo Proyecto" (card-footer que contiene el form)
-      const formProyecto = document.getElementById("form-proyecto");
-      if (formProyecto) {
-        const footer = formProyecto.closest(".card-footer");
-        if (footer) footer.style.display = "none";
-      }
-    }
-  } catch (e) {
-    console.error("Permisos UI error:", e);
-  }
-}
-
-function esAdmin() {
-  return CURRENT_USER?.rol === "admin";
-}
 
 /* ==================== SECCIONES ==================== */
 
 function mostrarSeccion(id) {
-  // Bloqueo local de secciones admin
   if ((id === "admin-almacen" || id === "usuarios") && !esAdmin()) {
     alert("No tienes permisos para ver esta sección.");
     id = "materiales";
   }
 
   document.querySelectorAll(".seccion").forEach(sec => sec.classList.remove("activa"));
-  const target = document.getElementById(id);
-  if (target) target.classList.add("activa");
+  document.getElementById(id)?.classList.add("activa");
 
   document.querySelectorAll(".nav-btn").forEach(btn => {
     btn.classList.toggle("activa", btn.dataset.section === id);
@@ -117,82 +212,10 @@ function mostrarSeccion(id) {
 
   if (id === "admin-almacen") cargarAdminMateriales();
   if (id === "movimientos") cargarMovimientosGlobal();
-  if (id === "usuarios") cargarUsuarios();
 }
 
 document.querySelectorAll(".nav-btn").forEach(btn => {
   btn.addEventListener("click", () => mostrarSeccion(btn.dataset.section));
-});
-
-/* ==================== USUARIOS ==================== */
-
-async function cargarUsuarios() {
-  const res = await apiFetch(`${API_BASE}/users`);
-  if (res.status === 403) {
-    alert("No tienes permisos para ver Usuarios.");
-    mostrarSeccion("materiales");
-    return;
-  }
-
-  const data = await res.json();
-
-  const tbody = document.querySelector("#tabla-usuarios tbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  if (!data.ok) {
-    alert(data.message || "No se pudo cargar usuarios");
-    return;
-  }
-
-  data.usuarios.forEach(u => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${u.nombre}</td>
-      <td>${u.email}</td>
-      <td>${u.rol}</td>
-      <td>${u.activo ? "Sí" : "No"}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-document.getElementById("form-usuario")?.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  if (!esAdmin()) {
-    alert("No tienes permisos para crear usuarios.");
-    return;
-  }
-
-  const form = e.target;
-
-  const payload = {
-    nombre: form.nombre.value.trim(),
-    email: form.email.value.trim(),
-    password: form.password.value,
-    rol: form.rol.value
-  };
-
-  const res = await apiFetch(`${API_BASE}/users`, {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
-
-  if (res.status === 403) {
-    alert("No tienes permisos para crear usuarios.");
-    return;
-  }
-
-  const data = await res.json();
-
-  if (data.ok) {
-    alert("Usuario creado");
-    form.reset();
-    cargarUsuarios();
-  } else {
-    alert(data.message || "Error al crear usuario");
-  }
 });
 
 /* ==================== MATERIALES ==================== */
@@ -200,7 +223,6 @@ document.getElementById("form-usuario")?.addEventListener("submit", async (e) =>
 async function cargarMateriales() {
   const res = await apiFetch(`${API_BASE}/materiales`);
   const data = await res.json();
-
   const tbody = document.querySelector("#tabla-materiales tbody");
   if (!tbody) return;
   tbody.innerHTML = "";
@@ -224,18 +246,22 @@ async function cargarMateriales() {
 document.getElementById("form-material")?.addEventListener("submit", async e => {
   e.preventDefault();
 
-  if (!esAdmin()) {
-    alert("No tienes permisos para crear materiales.");
-    return;
-  }
+  if (!esAdmin()) return alert("No tienes permisos para crear materiales.");
 
   const form = e.target;
+
   const payload = {
     codigo: form.codigo.value,
     nombre: form.nombre.value,
     stock_inicial: parseFloat(form.stock_inicial.value || 0),
     stock_minimo: parseFloat(form.stock_minimo.value || 0),
-    ubicacion: form.ubicacion.value
+    ubicacion: form.ubicacion.value,
+
+    proveedor_id: form.proveedor_id.value ? Number(form.proveedor_id.value) : null,
+    ticket_numero: form.ticket_numero.value?.trim() || null,
+    requiere_protocolo: Number(form.requiere_protocolo.value),
+    protocolo_texto: form.protocolo_texto.value?.trim() || null,
+    precio_unitario: form.precio_unitario.value ? Number(form.precio_unitario.value) : null,
   };
 
   const res = await apiFetch(`${API_BASE}/materiales`, {
@@ -243,18 +269,15 @@ document.getElementById("form-material")?.addEventListener("submit", async e => 
     body: JSON.stringify(payload)
   });
 
-  if (res.status === 403) {
-    alert("No tienes permisos para crear materiales.");
-    return;
-  }
-
   const data = await res.json();
 
   if (data.ok) {
     alert("Material guardado");
     form.reset();
+    setupProtocoloToggle("requiere-protocolo", "protocolo-texto");
     cargarMateriales();
     cargarMaterialesEnSelectProyecto();
+    cargarAdminMateriales();
   } else {
     alert(data.message || "Error al guardar material");
   }
@@ -263,6 +286,7 @@ document.getElementById("form-material")?.addEventListener("submit", async e => 
 /* ==================== PROYECTOS ==================== */
 
 let proyectoSeleccionadoId = null;
+let etapaActivaId = null;
 
 async function cargarProyectos() {
   const res = await apiFetch(`${API_BASE}/proyectos`);
@@ -272,73 +296,66 @@ async function cargarProyectos() {
   if (!ul) return;
   ul.innerHTML = "";
 
-  if (data.ok) {
-    data.proyectos.forEach(p => {
-  const li = document.createElement("li");
-  li.style.display = "flex";
-  li.style.alignItems = "center";
-  li.style.justifyContent = "space-between";
-  li.style.gap = "10px";
-
-  const info = document.createElement("span");
-  info.textContent = `${p.clave} - ${p.nombre}`;
-  info.style.cursor = "pointer";
-  info.onclick = () => seleccionarProyecto(p);
-
-  const acciones = document.createElement("div");
-  acciones.style.display = "flex";
-  acciones.style.gap = "8px";
-
-  const btnExcel = document.createElement("button");
-  btnExcel.className = "btn-secondary";
-  btnExcel.textContent = "Excel";
-  btnExcel.onclick = (e) => {
-    e.stopPropagation();
-    descargarArchivo(
-      `${API_BASE}/proyectos/${p.id}/export/excel`,
-      `proyecto_${p.clave}_movimientos.xlsx`
-    );
-  };
-
-  const btnPdf = document.createElement("button");
-  btnPdf.className = "btn-secondary";
-  btnPdf.textContent = "PDF";
-  btnPdf.onclick = (e) => {
-    e.stopPropagation();
-    descargarArchivo(
-      `${API_BASE}/proyectos/${p.id}/export/pdf`,
-      `proyecto_${p.clave}_movimientos.pdf`
-    );
-  };
-
-  acciones.appendChild(btnExcel);
-  acciones.appendChild(btnPdf);
-
-  li.appendChild(info);
-  li.appendChild(acciones);
-  ul.appendChild(li);
-});
-
-  } else {
+  if (!data.ok) {
     alert(data.message || "Error al cargar proyectos");
+    return;
   }
+
+  data.proyectos.forEach(p => {
+    const li = document.createElement("li");
+    li.style.display = "flex";
+    li.style.alignItems = "center";
+    li.style.justifyContent = "space-between";
+    li.style.gap = "10px";
+
+    const info = document.createElement("span");
+    info.textContent = `${p.clave} - ${p.nombre} (${p.estado})`;
+    info.style.cursor = "pointer";
+    info.onclick = () => seleccionarProyecto(p);
+
+    const acciones = document.createElement("div");
+    acciones.style.display = "flex";
+    acciones.style.gap = "8px";
+
+    const btnXlsx = document.createElement("button");
+    btnXlsx.className = "btn-secondary";
+    btnXlsx.textContent = "Excel";
+    btnXlsx.onclick = (e) => {
+      e.stopPropagation();
+      descargarArchivo(`${API_BASE}/proyectos/${p.id}/export/excel`, `proyecto_${p.clave}_movimientos.xlsx`);
+    };
+
+    const btnPdf = document.createElement("button");
+    btnPdf.className = "btn-secondary";
+    btnPdf.textContent = "PDF";
+    btnPdf.onclick = (e) => {
+      e.stopPropagation();
+      descargarArchivo(`${API_BASE}/proyectos/${p.id}/export/pdf`, `proyecto_${p.clave}_movimientos.pdf`);
+    };
+
+    acciones.appendChild(btnXlsx);
+    acciones.appendChild(btnPdf);
+
+    li.appendChild(info);
+    li.appendChild(acciones);
+    ul.appendChild(li);
+  });
 }
 
 function seleccionarProyecto(proyecto) {
   proyectoSeleccionadoId = proyecto.id;
-  const info = document.getElementById("info-proyecto-seleccionado");
-  if (info) info.textContent = `${proyecto.clave} - ${proyecto.nombre}`;
 
+  document.getElementById("info-proyecto-seleccionado").textContent =
+    `${proyecto.clave} - ${proyecto.nombre}`;
+
+  cargarEtapaActiva(proyecto.id);
   cargarMovimientosDeProyecto(proyecto.id);
 }
 
 document.getElementById("form-proyecto")?.addEventListener("submit", async e => {
   e.preventDefault();
 
-  if (!esAdmin()) {
-    alert("No tienes permisos para crear proyectos.");
-    return;
-  }
+  if (!esAdmin()) return alert("No tienes permisos para crear proyectos.");
 
   const form = e.target;
   const payload = {
@@ -354,11 +371,6 @@ document.getElementById("form-proyecto")?.addEventListener("submit", async e => 
     body: JSON.stringify(payload)
   });
 
-  if (res.status === 403) {
-    alert("No tienes permisos para crear proyectos.");
-    return;
-  }
-
   const data = await res.json();
 
   if (data.ok) {
@@ -367,6 +379,60 @@ document.getElementById("form-proyecto")?.addEventListener("submit", async e => 
     cargarProyectos();
   } else {
     alert(data.message || "Error al crear proyecto");
+  }
+});
+
+/* ==================== ETAPAS ==================== */
+
+async function cargarEtapaActiva(proyectoId) {
+  const res = await apiFetch(`${API_BASE}/proyectos/${proyectoId}/etapas/activa`);
+  const data = await res.json();
+
+  const txt = document.getElementById("etapa-activa-texto");
+  if (!data.ok || !data.etapa) {
+    etapaActivaId = null;
+    if (txt) txt.textContent = "—";
+    return;
+  }
+
+  etapaActivaId = data.etapa.id;
+  if (txt) txt.textContent = data.etapa.nombre;
+}
+
+document.getElementById("btn-crear-etapa")?.addEventListener("click", async () => {
+  if (!esAdmin()) return alert("Solo admin puede crear etapas.");
+  if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero");
+
+  const nombre = prompt("Nombre de la nueva etapa:");
+  if (!nombre) return;
+
+  const res = await apiFetch(`${API_BASE}/proyectos/${proyectoSeleccionadoId}/etapas`, {
+    method: "POST",
+    body: JSON.stringify({ nombre })
+  });
+
+  const data = await res.json();
+  if (data.ok) {
+    alert("Etapa creada");
+    await cargarEtapaActiva(proyectoSeleccionadoId);
+  } else {
+    alert(data.message || "Error al crear etapa");
+  }
+});
+
+document.getElementById("btn-cerrar-etapa")?.addEventListener("click", async () => {
+  if (!esAdmin()) return alert("Solo admin puede cerrar etapas.");
+  if (!etapaActivaId) return alert("No hay etapa activa");
+
+  const res = await apiFetch(`${API_BASE}/etapas/${etapaActivaId}/cerrar`, { method: "POST" });
+  const data = await res.json();
+
+  if (data.ok) {
+    alert("Etapa cerrada");
+    etapaActivaId = null;
+    document.getElementById("etapa-activa-texto").textContent = "—";
+  } else {
+    alert(data.message || "Error al cerrar etapa");
   }
 });
 
@@ -387,37 +453,28 @@ async function cargarMaterialesEnSelectProyecto() {
       opt.textContent = `${m.codigo} - ${m.nombre} (stock: ${m.stock_actual})`;
       select.appendChild(opt);
     });
-  } else {
-    alert(data.message || "Error al cargar materiales para proyectos");
   }
 }
 
 document.getElementById("form-salida-proyecto")?.addEventListener("submit", async e => {
   e.preventDefault();
 
+  if (!esAdmin()) return alert("No tienes permisos para asignar material.");
   if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero");
-
-  if (!esAdmin()) {
-    alert("No tienes permisos para asignar material (salida).");
-    return;
-  }
+  if (!etapaActivaId) return alert("No hay etapa activa. Crea una etapa primero.");
 
   const form = e.target;
   const payload = {
     material_id: parseInt(form.material_id.value),
     cantidad: parseFloat(form.cantidad.value),
-    comentario: form.comentario.value
+    comentario: form.comentario.value,
+    etapa_id: etapaActivaId
   };
 
   const res = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoSeleccionadoId}/salida`, {
     method: "POST",
     body: JSON.stringify(payload)
   });
-
-  if (res.status === 403) {
-    alert("No tienes permisos para asignar material (salida).");
-    return;
-  }
 
   const data = await res.json();
 
@@ -427,6 +484,7 @@ document.getElementById("form-salida-proyecto")?.addEventListener("submit", asyn
     cargarMovimientosDeProyecto(proyectoSeleccionadoId);
     cargarMateriales();
     cargarMaterialesEnSelectProyecto();
+    cargarAdminMateriales();
   } else {
     alert(data.message || "Error al asignar material");
   }
@@ -454,37 +512,22 @@ async function cargarMovimientosDeProyecto(idProyecto) {
       `;
       tbody.appendChild(tr);
     });
-  } else {
-    alert(data.message || "Error al cargar movimientos del proyecto");
   }
 }
 
 /* ==================== ADMIN ALMACÉN ==================== */
 
 async function cargarAdminMateriales() {
-  if (!esAdmin()) {
-    alert("No tienes permisos para Admin Almacén.");
-    mostrarSeccion("materiales");
-    return;
-  }
+  if (!esAdmin()) return;
 
   const res = await apiFetch(`${API_BASE}/materiales`);
-  if (res.status === 403) {
-    alert("No tienes permisos para Admin Almacén.");
-    mostrarSeccion("materiales");
-    return;
-  }
-
   const data = await res.json();
 
   const tbody = document.querySelector("#tabla-admin-materiales tbody");
   if (!tbody) return;
   tbody.innerHTML = "";
 
-  if (!data.ok) {
-    alert(data.message || "Error al cargar admin materiales");
-    return;
-  }
+  if (!data.ok) return;
 
   data.materiales.forEach(m => {
     const tr = document.createElement("tr");
@@ -511,18 +554,12 @@ async function cargarAdminMateriales() {
 }
 
 async function cargarEditorMaterial(id) {
-  if (!esAdmin()) {
-    alert("No tienes permisos para editar materiales.");
-    return;
-  }
+  if (!esAdmin()) return;
 
   const res = await apiFetch(`${API_BASE}/materiales`);
   const data = await res.json();
 
-  if (!data.ok) {
-    alert(data.message || "Error al cargar materiales");
-    return;
-  }
+  if (!data.ok) return;
 
   const mat = data.materiales.find(m => m.id == id);
   if (!mat) return;
@@ -537,17 +574,24 @@ async function cargarEditorMaterial(id) {
   form.stock_minimo.value = mat.stock_minimo || 0;
   form.ubicacion.value = mat.ubicacion || "";
 
-  const panel = document.getElementById("admin-form-panel");
-  if (panel) panel.style.display = "block";
+  // nuevas
+  const selProv = document.getElementById("select-proveedor-editar");
+  if (selProv) selProv.value = mat.proveedor_id || "";
+
+  form.ticket_numero.value = mat.ticket_numero || "";
+  document.getElementById("requiere-protocolo-editar").value = String(mat.requiere_protocolo || 0);
+  form.protocolo_texto.value = mat.protocolo_texto || "";
+  form.precio_unitario.value = mat.precio_unitario ?? "";
+
+  setupProtocoloToggle("requiere-protocolo-editar", "protocolo-texto-editar");
+
+  document.getElementById("admin-form-panel").style.display = "block";
 }
 
 document.getElementById("form-editar-material")?.addEventListener("submit", async e => {
   e.preventDefault();
 
-  if (!esAdmin()) {
-    alert("No tienes permisos para actualizar materiales.");
-    return;
-  }
+  if (!esAdmin()) return;
 
   const form = e.target;
   const id = form.dataset.id;
@@ -555,7 +599,13 @@ document.getElementById("form-editar-material")?.addEventListener("submit", asyn
   const payload = {
     nombre: form.nombre.value,
     stock_minimo: parseFloat(form.stock_minimo.value),
-    ubicacion: form.ubicacion.value
+    ubicacion: form.ubicacion.value,
+
+    proveedor_id: form.proveedor_id.value ? Number(form.proveedor_id.value) : null,
+    ticket_numero: form.ticket_numero.value?.trim() || null,
+    requiere_protocolo: Number(form.requiere_protocolo.value),
+    protocolo_texto: form.protocolo_texto.value?.trim() || null,
+    precio_unitario: form.precio_unitario.value ? Number(form.precio_unitario.value) : null,
   };
 
   const res = await apiFetch(`${API_BASE}/materiales/${id}`, {
@@ -563,17 +613,13 @@ document.getElementById("form-editar-material")?.addEventListener("submit", asyn
     body: JSON.stringify(payload)
   });
 
-  if (res.status === 403) {
-    alert("No tienes permisos para actualizar materiales.");
-    return;
-  }
-
   const data = await res.json();
 
   if (data.ok) {
     alert("Material actualizado");
     cargarAdminMateriales();
     cargarMateriales();
+    cargarMaterialesEnSelectProyecto();
   } else {
     alert(data.message || "Error al actualizar material");
   }
@@ -584,10 +630,7 @@ document.getElementById("form-editar-material")?.addEventListener("submit", asyn
 document.getElementById("form-ajuste-stock")?.addEventListener("submit", async e => {
   e.preventDefault();
 
-  if (!esAdmin()) {
-    alert("No tienes permisos para ajustar stock.");
-    return;
-  }
+  if (!esAdmin()) return;
 
   const form = e.target;
   const idMaterial = document.getElementById("form-editar-material")?.dataset.id;
@@ -608,17 +651,13 @@ document.getElementById("form-ajuste-stock")?.addEventListener("submit", async e
     body: JSON.stringify(payload)
   });
 
-  if (res.status === 403) {
-    alert("No tienes permisos para ajustar stock.");
-    return;
-  }
-
   const data = await res.json();
 
   if (data.ok) {
     alert("Movimiento registrado");
     cargarAdminMateriales();
     cargarMateriales();
+    cargarMaterialesEnSelectProyecto();
   } else {
     alert(data.message || "Error al registrar movimiento");
   }
@@ -647,74 +686,53 @@ async function cargarMovimientosGlobal() {
       `;
       tbody.appendChild(tr);
     });
-  } else {
-    alert(data.message || "Error al cargar movimientos globales");
   }
 }
 
-/* ==================== ELIMINAR MATERIAL / PROYECTO ==================== */
+/* ==================== ELIMINAR MATERIAL ==================== */
 
 async function eliminarMaterial(id) {
-  if (!esAdmin()) {
-    alert("No tienes permisos para eliminar materiales.");
-    return;
-  }
+  if (!esAdmin()) return;
 
   if (!confirm("¿Estás seguro de que deseas eliminar este material?")) return;
 
-  const res = await apiFetch(`${API_BASE}/materiales/${id}`, {
-    method: "DELETE"
-  });
-
-  if (res.status === 403) {
-    alert("No tienes permisos para eliminar materiales.");
-    return;
-  }
-
+  const res = await apiFetch(`${API_BASE}/materiales/${id}`, { method: "DELETE" });
   const data = await res.json();
 
   if (data.ok) {
-    alert("Material eliminado correctamente");
+    alert("Material eliminado (desactivado) correctamente");
     cargarAdminMateriales();
     cargarMateriales();
+    cargarMaterialesEnSelectProyecto();
   } else {
     alert(data.message || "Error al eliminar material");
   }
 }
 
-async function eliminarProyecto(id) {
-  if (!esAdmin()) {
-    alert("No tienes permisos para eliminar proyectos.");
-    return;
-  }
-
-  if (!confirm("¿Eliminar proyecto?")) return;
-
-  const res = await apiFetch(`${API_BASE}/proyectos/${id}`, {
-    method: "DELETE"
-  });
-
-  if (res.status === 403) {
-    alert("No tienes permisos para eliminar proyectos.");
-    return;
-  }
-
-  const data = await res.json();
-
-  if (data.ok) {
-    alert("Proyecto eliminado");
-    cargarProyectos();
-  } else {
-    alert(data.message || "Error al eliminar proyecto");
-  }
-}
-
 /* ==================== INICIO ==================== */
 
-(async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   await cargarUsuarioActual();
+
+  await cargarProveedoresEnSelect(document.getElementById("select-proveedor-material"));
+  await cargarProveedoresEnSelect(document.getElementById("select-proveedor-editar"));
+  setupProveedorUI();
+
+  setupProtocoloToggle("requiere-protocolo", "protocolo-texto");
+  setupProtocoloToggle("requiere-protocolo-editar", "protocolo-texto-editar");
+
+  document.getElementById("btn-export-materiales-excel")?.addEventListener("click", () => {
+    descargarArchivo(`${API_BASE}/materiales/export/excel`, "materiales.xlsx");
+  });
+
+  document.getElementById("btn-export-materiales-pdf")?.addEventListener("click", () => {
+    descargarArchivo(`${API_BASE}/materiales/export/pdf`, "materiales.pdf");
+  });
+
   cargarMateriales();
   cargarProyectos();
   cargarMaterialesEnSelectProyecto();
-})();
 
+  // default
+  mostrarSeccion("materiales");
+});
