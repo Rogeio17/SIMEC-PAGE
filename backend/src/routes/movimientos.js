@@ -12,6 +12,9 @@ import {
 
 const router = express.Router();
 
+router.get("/proyecto/:id/etapa/:etapaId/movimientos", listarMovimientosPorProyectoYEtapa);
+
+
 // 🔒 Todo movimientos requiere login
 router.use(requireAuth);
 

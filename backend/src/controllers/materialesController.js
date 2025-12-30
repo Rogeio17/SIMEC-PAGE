@@ -9,9 +9,16 @@ export async function listarMateriales(_req, res) {
          m.proveedor_id, p.nombre AS proveedor_nombre,
          m.ticket_numero, m.requiere_protocolo, m.protocolo_texto,
          m.precio_unitario,
-         m.creado_por_usuario_id, m.actualizado_por_usuario_id
+         m.creado_por_usuario_id,
+         u1.nombre AS creado_por_nombre,
+         u1.email  AS creado_por_email,
+         m.actualizado_por_usuario_id,
+         u2.nombre AS actualizado_por_nombre,
+         u2.email  AS actualizado_por_email
        FROM materiales m
        LEFT JOIN proveedores p ON p.id = m.proveedor_id
+       LEFT JOIN users u1 ON u1.id = m.creado_por_usuario_id
+       LEFT JOIN users u2 ON u2.id = m.actualizado_por_usuario_id
        WHERE m.activo = 1
        ORDER BY m.id DESC`
     );
@@ -46,7 +53,6 @@ export async function crearMaterial(req, res) {
     const reqProto = Number(requiere_protocolo) === 1 ? 1 : 0;
     const protoText = reqProto ? (protocolo_texto || null) : null;
 
-    // Evitar duplicado por código
     const [existe] = await pool.query(
       "SELECT id FROM materiales WHERE codigo = ? LIMIT 1",
       [codigo]
@@ -142,10 +148,6 @@ export async function actualizarMaterial(req, res) {
   }
 }
 
-/**
- * Mejor práctica: NO borrar físico, marcar activo=0
- * (así se conserva histórico)
- */
 export async function eliminarMaterial(req, res) {
   try {
     const id = Number(req.params.id);
