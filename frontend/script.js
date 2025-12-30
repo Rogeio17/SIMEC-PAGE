@@ -504,6 +504,68 @@ async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
   });
 }
 
+/* ==================== BOTONES ETAPAS ==================== */
+
+document.getElementById("btn-crear-etapa")?.addEventListener("click", async () => {
+  if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero");
+  if (!esAdmin()) return alert("No tienes permisos (solo admin).");
+
+  const nombre = prompt("Nombre de la nueva etapa:");
+  if (!nombre || !nombre.trim()) return;
+
+  const res = await apiFetch(`${API_BASE}/proyectos/${proyectoSeleccionadoId}/etapas`, {
+    method: "POST",
+    body: JSON.stringify({ nombre: nombre.trim() })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok || !data.ok) {
+    return alert(data.message || "No se pudo crear la etapa");
+  }
+
+  alert("Etapa creada");
+
+  // refrescar todo
+  await cargarEtapaActiva(proyectoSeleccionadoId);
+  etapaSeleccionadaId = "__ALL__";
+  const select = document.getElementById("select-etapa");
+  if (select) select.value = "__ALL__";
+  await cargarEtapasProyecto(proyectoSeleccionadoId);
+  await refrescarMovimientosProyecto();
+});
+
+document.getElementById("btn-cerrar-etapa")?.addEventListener("click", async () => {
+  if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero");
+  if (!esAdmin()) return alert("No tienes permisos (solo admin).");
+
+  // si no hay etapa activa, no se puede cerrar
+  if (!etapaActivaId) return alert("No hay etapa activa para cerrar.");
+
+  if (!confirm("¿Cerrar la etapa activa?")) return;
+
+  const res = await apiFetch(`${API_BASE}/etapas/${etapaActivaId}/cerrar`, {
+    method: "POST"
+  });
+
+  const data = await res.json();
+
+  if (!res.ok || !data.ok) {
+    return alert(data.message || "No se pudo cerrar la etapa");
+  }
+
+  alert("Etapa cerrada");
+
+  // refrescar todo
+  await cargarEtapaActiva(proyectoSeleccionadoId);
+  etapaSeleccionadaId = "__ALL__";
+  const select = document.getElementById("select-etapa");
+  if (select) select.value = "__ALL__";
+  await cargarEtapasProyecto(proyectoSeleccionadoId);
+  await refrescarMovimientosProyecto();
+});
+
+
 
 /* ==================== MATERIALES EN PROYECTO ==================== */
 
