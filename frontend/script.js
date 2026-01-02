@@ -11,7 +11,6 @@ function logout() {
   location.href = "/login.html";
 }
 
-// Decodifica JWT sin librerías (solo payload base64url)
 function getUserFromToken() {
   const t = getToken();
   if (!t) return null;
@@ -36,7 +35,6 @@ function esAdmin() {
   return rol === "admin";
 }
 
-// fetch con JWT + manejo de 401
 async function apiFetch(url, options = {}) {
   const token = getToken();
 
@@ -47,9 +45,7 @@ async function apiFetch(url, options = {}) {
   };
 
   const res = await fetch(url, { ...options, headers });
-
   if (res.status === 401) logout();
-
   return res;
 }
 
@@ -58,7 +54,6 @@ async function apiFetch(url, options = {}) {
 function aplicarUIporRol() {
   const admin = esAdmin();
 
-  // badge
   const badge = document.getElementById("user-badge");
   const u = getUserFromToken();
   if (badge) {
@@ -66,14 +61,12 @@ function aplicarUIporRol() {
     badge.textContent = u ? `Rol: ${admin ? "admin" : "user"}${email}` : "";
   }
 
-  // nav
   const btnUsuarios = document.getElementById("btn-nav-usuarios");
   if (btnUsuarios) btnUsuarios.style.display = admin ? "flex" : "none";
 
   const btnAdminAlmacen = document.getElementById("btn-nav-admin-almacen");
   if (btnAdminAlmacen) btnAdminAlmacen.style.display = admin ? "flex" : "none";
 
-  // permisos acciones
   const btnGuardarMaterial = document.getElementById("btn-guardar-material");
   const hintMat = document.getElementById("hint-material-admin");
   if (btnGuardarMaterial) btnGuardarMaterial.disabled = !admin;
@@ -89,7 +82,6 @@ function aplicarUIporRol() {
   if (btnSalidaProyecto) btnSalidaProyecto.disabled = !admin;
   if (hintSalida) hintSalida.style.display = admin ? "none" : "block";
 
-  // etapas (crear/cerrar + export etapa)
   const btnCrearEtapa = document.getElementById("btn-crear-etapa");
   const btnCerrarEtapa = document.getElementById("btn-cerrar-etapa");
   const btnEtapaX = document.getElementById("btn-export-etapa-excel");
@@ -98,7 +90,6 @@ function aplicarUIporRol() {
   if (btnCrearEtapa) btnCrearEtapa.style.display = admin ? "inline-flex" : "none";
   if (btnCerrarEtapa) btnCerrarEtapa.style.display = admin ? "inline-flex" : "none";
 
-  // export materiales (solo admin si así lo quieres)
   const expMatX = document.getElementById("btn-export-materiales-excel");
   const expMatP = document.getElementById("btn-export-materiales-pdf");
   if (expMatX) expMatX.style.display = admin ? "inline-flex" : "none";
@@ -118,7 +109,7 @@ function mostrarSeccion(id) {
     btn.classList.toggle("activa", btn.dataset.section === id);
   });
 
-  if (id === "admin-almacen") cargarAdminMateriales();
+  if (id === "admin-almacen") cargarAdminMaterialesV2();
   if (id === "movimientos") cargarMovimientosGlobal();
   if (id === "usuarios") cargarUsuarios();
 }
@@ -131,8 +122,6 @@ document.querySelectorAll(".nav-btn").forEach(btn => {
 
 async function descargarArchivo(url, nombreArchivo) {
   const res = await apiFetch(url);
-
-  console.log("EXPORT", url, "STATUS", res.status);
 
   if (res.status === 403) {
     alert("No tienes permisos para exportar.");
@@ -167,13 +156,17 @@ document.getElementById("btn-export-materiales-pdf")?.addEventListener("click", 
 
 /* ==================== PROVEEDORES ==================== */
 
+let proveedoresCache = [];
+
 async function cargarProveedores() {
   const select1 = document.getElementById("select-proveedor-material");
-  const select2 = document.getElementById("select-proveedor-editar");
+  const select2 = document.getElementById("select-proveedor-lote");
   if (!select1 && !select2) return;
 
   const res = await apiFetch(`${API_BASE}/proveedores`);
   const data = await res.json();
+
+  proveedoresCache = data.proveedores || [];
 
   const llenar = (sel) => {
     if (!sel) return;
@@ -244,16 +237,10 @@ function filtrarMateriales(q) {
 
   return materialesCache.filter(m => {
     const texto = [
-      m.codigo,
-      m.nombre,
-      m.ubicacion,
-      m.proveedor_nombre,
-      m.ticket_numero,
-      m.protocolo_texto,
-      m.creado_por_nombre,
-      m.creado_por_email
+      m.codigo, m.nombre, m.ubicacion,
+      m.proveedor_nombre, m.ticket_numero,
+      m.protocolo_texto, m.creado_por_nombre, m.creado_por_email
     ].join(" ").toLowerCase();
-
     return texto.includes(q);
   });
 }
@@ -280,7 +267,6 @@ async function cargarMateriales() {
   }
 
   materialesCache = data.materiales || [];
-
   const q = document.getElementById("buscar-materiales")?.value || "";
   renderMaterialesTabla(filtrarMateriales(q));
 }
@@ -389,15 +375,12 @@ async function seleccionarProyecto(proyecto) {
   document.getElementById("info-proyecto-seleccionado").textContent =
     `${proyecto.clave} - ${proyecto.nombre}`;
 
-  // por defecto todas
   etapaSeleccionadaId = "__ALL__";
   const selectEtapa = document.getElementById("select-etapa");
   if (selectEtapa) selectEtapa.value = "__ALL__";
 
   await cargarEtapaActiva(proyectoSeleccionadoId);
   await cargarEtapasProyecto(proyectoSeleccionadoId);
-
-  // refresca movimientos + totales
   await refrescarMovimientosProyecto();
 }
 
@@ -635,7 +618,7 @@ async function refrescarMovimientosProyecto() {
   await calcularTotalesProyectoYEtapa();
 }
 
-/* ==================== REGISTRAR SALIDA A PROYECTO (SUBMIT) ==================== */
+/* ==================== REGISTRAR SALIDA A PROYECTO ==================== */
 
 document.getElementById("form-salida-proyecto")?.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -645,11 +628,7 @@ document.getElementById("form-salida-proyecto")?.addEventListener("submit", asyn
   if (!etapaActivaId) return alert("No hay etapa activa. Crea una etapa primero.");
 
   const form = e.target;
-
-  // si el filtro dejó el select vacío:
-  if (!form.material_id.value) {
-    return alert("Selecciona un material (si no aparece, limpia la búsqueda).");
-  }
+  if (!form.material_id.value) return alert("Selecciona un material (limpia búsqueda si no aparece).");
 
   const payload = {
     material_id: parseInt(form.material_id.value),
@@ -669,7 +648,6 @@ document.getElementById("form-salida-proyecto")?.addEventListener("submit", asyn
   alert("Salida registrada");
   form.reset();
 
-  // mantiene el buscador, pero refresca options
   await cargarMateriales();
   await cargarMaterialesEnSelectProyecto();
   await refrescarMovimientosProyecto();
@@ -685,7 +663,6 @@ function money(n) {
 async function calcularTotalesProyectoYEtapa() {
   if (!proyectoSeleccionadoId) return;
 
-  // Total proyecto (con total o precio_unitario*cantidad)
   const resAll = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoSeleccionadoId}/movimientos`);
   const dataAll = await resAll.json();
   if (!dataAll.ok) return;
@@ -719,7 +696,7 @@ async function calcularTotalesProyectoYEtapa() {
 
 document.getElementById("btn-export-etapa-excel")?.addEventListener("click", () => {
   if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero");
-  if (etapaSeleccionadaId === "__ALL__") return alert("Selecciona una etapa específica (no 'Todas').");
+  if (etapaSeleccionadaId === "__ALL__") return alert("Selecciona una etapa específica.");
 
   descargarArchivo(
     `${API_BASE}/proyectos/${proyectoSeleccionadoId}/etapas/${etapaSeleccionadaId}/export/excel`,
@@ -729,7 +706,7 @@ document.getElementById("btn-export-etapa-excel")?.addEventListener("click", () 
 
 document.getElementById("btn-export-etapa-pdf")?.addEventListener("click", () => {
   if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero");
-  if (etapaSeleccionadaId === "__ALL__") return alert("Selecciona una etapa específica (no 'Todas').");
+  if (etapaSeleccionadaId === "__ALL__") return alert("Selecciona una etapa específica.");
 
   descargarArchivo(
     `${API_BASE}/proyectos/${proyectoSeleccionadoId}/etapas/${etapaSeleccionadaId}/export/pdf`,
@@ -737,29 +714,40 @@ document.getElementById("btn-export-etapa-pdf")?.addEventListener("click", () =>
   );
 });
 
-/* ==================== ADMIN ALMACÉN ==================== */
+/* ==================== ADMIN ALMACÉN V2 (LOTES) ==================== */
 
-function toggleProtocoloEditar() {
-  const sel = document.getElementById("select-requiere-protocolo-editar");
-  const grupo = document.getElementById("grupo-protocolo-texto-editar");
+let adminMaterialSeleccionado = null;
+let adminMaterialesCache = [];
+
+function setAdminLotesVisible(visible) {
+  const panel = document.getElementById("admin-lotes-panel");
+  const vacio = document.getElementById("admin-lotes-vacio");
+  if (panel) panel.style.display = visible ? "block" : "none";
+  if (vacio) vacio.style.display = visible ? "none" : "block";
+}
+
+function toggleProtocoloLote() {
+  const sel = document.getElementById("select-lote-requiere-protocolo");
+  const grupo = document.getElementById("grupo-lote-protocolo");
   if (!sel || !grupo) return;
   grupo.style.display = sel.value === "1" ? "block" : "none";
 }
-document.getElementById("select-requiere-protocolo-editar")?.addEventListener("change", toggleProtocoloEditar);
+document.getElementById("select-lote-requiere-protocolo")?.addEventListener("change", toggleProtocoloLote);
 
-async function cargarAdminMateriales() {
-  if (!esAdmin()) return;
+document.getElementById("buscar-admin-material")?.addEventListener("input", (e) => {
+  const q = (e.target.value || "").toLowerCase().trim();
+  const filtrados = !q
+    ? adminMaterialesCache
+    : adminMaterialesCache.filter(m => `${m.codigo} ${m.nombre}`.toLowerCase().includes(q));
+  renderAdminMaterialesTabla(filtrados);
+});
 
-  const res = await apiFetch(`${API_BASE}/materiales`);
-  const data = await res.json();
-
+function renderAdminMaterialesTabla(lista) {
   const tbody = document.querySelector("#tabla-admin-materiales tbody");
   if (!tbody) return;
   tbody.innerHTML = "";
 
-  if (!data.ok) return alert(data.message || "Error al cargar admin materiales");
-
-  data.materiales.forEach(m => {
+  lista.forEach(m => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${m.codigo}</td>
@@ -767,133 +755,206 @@ async function cargarAdminMateriales() {
       <td>${m.stock_actual}</td>
       <td>${m.ubicacion || ""}</td>
       <td>
-        <button class="btn-edit btn-secondary" data-id="${m.id}" type="button">✏️ Editar</button>
-        <button class="btn-delete btn-secondary" data-id="${m.id}" type="button">🗑 Eliminar</button>
+        <button class="btn-secondary" type="button" data-id="${m.id}">Ver lotes</button>
+        <button class="btn-secondary" type="button" data-del="${m.id}">🗑 Desactivar</button>
       </td>
     `;
     tbody.appendChild(tr);
   });
 
-  document.querySelectorAll(".btn-edit").forEach(btn => {
-    btn.onclick = () => cargarEditorMaterial(btn.dataset.id);
+  tbody.querySelectorAll("button[data-id]").forEach(btn => {
+    btn.onclick = () => seleccionarMaterialAdmin(btn.dataset.id);
   });
 
-  document.querySelectorAll(".btn-delete").forEach(btn => {
-    btn.onclick = () => eliminarMaterial(btn.dataset.id);
+  tbody.querySelectorAll("button[data-del]").forEach(btn => {
+    btn.onclick = () => eliminarMaterial(btn.dataset.del);
   });
 }
 
-async function cargarEditorMaterial(id) {
+async function cargarAdminMaterialesV2() {
   if (!esAdmin()) return;
 
   const res = await apiFetch(`${API_BASE}/materiales`);
   const data = await res.json();
-  if (!data.ok) return alert(data.message || "Error al cargar materiales");
 
-  const mat = data.materiales.find(m => String(m.id) === String(id));
-  if (!mat) return;
+  if (!data.ok) return alert(data.message || "Error al cargar materiales (admin)");
 
-  await cargarProveedores();
+  adminMaterialesCache = data.materiales || [];
+  const q = document.getElementById("buscar-admin-material")?.value || "";
+  const filtrados = q ? adminMaterialesCache.filter(m => `${m.codigo} ${m.nombre}`.toLowerCase().includes(q.toLowerCase())) : adminMaterialesCache;
 
-  const form = document.getElementById("form-editar-material");
-  form.dataset.id = id;
+  renderAdminMaterialesTabla(filtrados);
 
-  form.codigo.value = mat.codigo;
-  form.nombre.value = mat.nombre;
-  form.stock_minimo.value = mat.stock_minimo || 0;
-  form.ubicacion.value = mat.ubicacion || "";
-  form.proveedor_id.value = mat.proveedor_id || "";
-  form.ticket_numero.value = mat.ticket_numero || "";
-  form.requiere_protocolo.value = mat.requiere_protocolo ? "1" : "0";
-  form.protocolo_texto.value = mat.protocolo_texto || "";
-  form.precio_unitario.value = mat.precio_unitario ?? "";
-
-  toggleProtocoloEditar();
-  document.getElementById("admin-form-panel").style.display = "block";
+  // si ya había uno seleccionado, refresca
+  if (adminMaterialSeleccionado) {
+    await seleccionarMaterialAdmin(adminMaterialSeleccionado.id, true);
+  }
 }
 
-document.getElementById("form-editar-material")?.addEventListener("submit", async (e) => {
+async function seleccionarMaterialAdmin(materialId, silencioso = false) {
+  const mat = adminMaterialesCache.find(x => String(x.id) === String(materialId));
+  if (!mat) return;
+
+  adminMaterialSeleccionado = mat;
+
+  const lbl = document.getElementById("admin-material-seleccionado");
+  if (lbl) lbl.textContent = `${mat.codigo} - ${mat.nombre}`;
+
+  setAdminLotesVisible(true);
+
+  // llenar proveedores en select de lotes
+  await cargarProveedores();
+  // cargar lotes
+  await cargarLotesMaterial(mat.id, silencioso);
+}
+
+async function cargarLotesMaterial(materialId, silencioso = false) {
+  const res = await apiFetch(`${API_BASE}/materiales/${materialId}/lotes`);
+  const data = await res.json();
+
+  if (!data.ok) {
+    if (!silencioso) alert(data.message || "No se pudieron cargar lotes");
+    return;
+  }
+
+  const tbody = document.querySelector("#tabla-admin-lotes tbody");
+  if (tbody) tbody.innerHTML = "";
+
+  const selectAjuste = document.getElementById("select-ajuste-lote");
+  if (selectAjuste) selectAjuste.innerHTML = "";
+
+  (data.lotes || []).forEach(l => {
+    // tabla
+    if (tbody) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${l.id}</td>
+        <td>${l.proveedor_nombre || ""}</td>
+        <td>${l.precio_unitario ?? ""}</td>
+        <td>${l.ticket_numero || ""}</td>
+        <td>${l.requiere_protocolo ? (l.protocolo_texto || "Sí") : "No"}</td>
+        <td>${l.cantidad_inicial ?? ""}</td>
+        <td>${l.cantidad_disponible ?? ""}</td>
+        <td>${l.creado_en ? new Date(l.creado_en).toLocaleString() : ""}</td>
+        <td>
+          <button class="btn-secondary" type="button" data-del-lote="${l.id}">🗑 Desactivar</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    // select ajuste
+    if (selectAjuste) {
+      const opt = document.createElement("option");
+      opt.value = l.id;
+      const prov = l.proveedor_nombre ? ` · ${l.proveedor_nombre}` : "";
+      const precio = l.precio_unitario != null ? ` · $${Number(l.precio_unitario).toFixed(2)}` : "";
+      selectAjuste.appendChild(opt);
+      opt.textContent = `Lote ${l.id}${prov}${precio} · disp:${l.cantidad_disponible}`;
+    }
+  });
+
+  tbody?.querySelectorAll("button[data-del-lote]")?.forEach(btn => {
+    btn.onclick = () => eliminarLote(btn.dataset.delLote);
+  });
+}
+
+document.getElementById("form-crear-lote")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!esAdmin()) return alert("Solo admin.");
+  if (!adminMaterialSeleccionado) return alert("Selecciona un material.");
 
   const form = e.target;
-  const id = form.dataset.id;
 
   const requiere = form.requiere_protocolo.value === "1";
 
   const payload = {
-    nombre: form.nombre.value.trim(),
-    stock_minimo: parseFloat(form.stock_minimo.value || 0),
-    ubicacion: form.ubicacion.value.trim() || null,
     proveedor_id: form.proveedor_id.value ? Number(form.proveedor_id.value) : null,
+    precio_unitario: form.precio_unitario.value !== "" ? Number(form.precio_unitario.value) : null,
     ticket_numero: form.ticket_numero.value.trim() || null,
     requiere_protocolo: requiere ? 1 : 0,
     protocolo_texto: requiere ? (form.protocolo_texto.value.trim() || null) : null,
-    precio_unitario: form.precio_unitario.value !== "" ? Number(form.precio_unitario.value) : null
+    cantidad: Number(form.cantidad.value)
   };
 
-  const res = await apiFetch(`${API_BASE}/materiales/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(payload)
-  });
-
-  const data = await res.json();
-  if (!data.ok) return alert(data.message || "Error al actualizar material");
-
-  alert("Material actualizado");
-  await cargarAdminMateriales();
-  await cargarMateriales();
-  await cargarMaterialesEnSelectProyecto();
-});
-
-document.getElementById("form-ajuste-stock")?.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  if (!esAdmin()) return alert("Solo admin.");
-
-  const form = e.target;
-  const idMaterial = document.getElementById("form-editar-material")?.dataset?.id;
-  if (!idMaterial) return alert("Selecciona un material primero.");
-
-  const payload = {
-    material_id: Number(idMaterial),
-    cantidad: parseFloat(form.cantidad.value),
-    comentario: form.comentario.value.trim() || null
-  };
-
-  const endpoint =
-    form.tipo.value === "entrada"
-      ? `${API_BASE}/movimientos/entrada`
-      : `${API_BASE}/movimientos/salida`;
-
-  const res = await apiFetch(endpoint, {
+  const res = await apiFetch(`${API_BASE}/materiales/${adminMaterialSeleccionado.id}/lotes`, {
     method: "POST",
     body: JSON.stringify(payload)
   });
 
   const data = await res.json();
-  if (!data.ok) return alert(data.message || "Error al registrar movimiento");
+  if (!data.ok) return alert(data.message || "No se pudo crear el lote");
 
-  alert("Movimiento registrado");
+  alert("Lote creado y stock actualizado");
+  form.reset();
+  toggleProtocoloLote();
+
+  await cargarMateriales();             // refresca stock general
+  await cargarAdminMaterialesV2();      // refresca lista admin
+  await cargarLotesMaterial(adminMaterialSeleccionado.id, true);
+});
+
+document.getElementById("form-ajustar-lote")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!esAdmin()) return alert("Solo admin.");
+  if (!adminMaterialSeleccionado) return alert("Selecciona un material.");
+
+  const form = e.target;
+  const loteId = form.lote_id.value;
+  if (!loteId) return alert("Selecciona un lote.");
+
+  const payload = {
+    tipo: form.tipo.value, // entrada/salida
+    cantidad: Number(form.cantidad.value),
+    comentario: form.comentario.value.trim() || null
+  };
+
+  const res = await apiFetch(`${API_BASE}/lotes/${loteId}/ajuste`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+  if (!data.ok) return alert(data.message || "No se pudo ajustar el lote");
+
+  alert("Ajuste aplicado");
   form.reset();
 
-  await cargarAdminMateriales();
   await cargarMateriales();
-  await cargarMaterialesEnSelectProyecto();
+  await cargarAdminMaterialesV2();
+  await cargarLotesMaterial(adminMaterialSeleccionado.id, true);
 });
+
+async function eliminarLote(loteId) {
+  if (!esAdmin()) return alert("Solo admin.");
+  if (!confirm("¿Desactivar este lote? (No se borra historial)")) return;
+
+  const res = await apiFetch(`${API_BASE}/lotes/${loteId}`, { method: "DELETE" });
+  const data = await res.json();
+
+  if (!data.ok) return alert(data.message || "No se pudo desactivar el lote");
+
+  alert("Lote desactivado");
+  await cargarMateriales();
+  await cargarAdminMaterialesV2();
+  if (adminMaterialSeleccionado) await cargarLotesMaterial(adminMaterialSeleccionado.id, true);
+}
 
 async function eliminarMaterial(id) {
   if (!esAdmin()) return alert("Solo admin.");
-  if (!confirm("¿Eliminar este material? (se desactiva)")) return;
+  if (!confirm("¿Desactivar este material?")) return;
 
   const res = await apiFetch(`${API_BASE}/materiales/${id}`, { method: "DELETE" });
   const data = await res.json();
 
-  if (!data.ok) return alert(data.message || "Error al eliminar material");
+  if (!data.ok) return alert(data.message || "Error al desactivar material");
 
-  alert("Material eliminado (desactivado)");
-  await cargarAdminMateriales();
+  alert("Material desactivado");
+  adminMaterialSeleccionado = null;
+  setAdminLotesVisible(false);
+
   await cargarMateriales();
-  await cargarMaterialesEnSelectProyecto();
+  await cargarAdminMaterialesV2();
 }
 
 /* ==================== MOVIMIENTOS GLOBALES ==================== */
@@ -988,13 +1049,14 @@ document.getElementById("form-usuario")?.addEventListener("submit", async (e) =>
   aplicarUIporRol();
   document.getElementById("btn-logout")?.addEventListener("click", logout);
 
-  // carga base
   cargarProveedores();
   cargarMateriales();
   cargarProyectos();
   cargarMaterialesEnSelectProyecto();
 
-  // oculta secciones admin si no admin
+  // panel admin lotes invisible hasta seleccionar material
+  setAdminLotesVisible(false);
+
   if (!esAdmin()) {
     const secAdmin = document.getElementById("admin-almacen");
     if (secAdmin) secAdmin.style.display = "none";

@@ -98,7 +98,7 @@
               </div>
             </div>
 
-            <!-- ✅ Buscador materiales -->
+            <!-- Buscador -->
             <div class="card-body">
               <div class="form-group" style="margin-bottom:12px;">
                 <label>Buscar material</label>
@@ -322,7 +322,6 @@
             <div class="card-body">
               <form id="form-salida-proyecto" class="form form-inline">
 
-                <!-- ✅ Buscador para filtrar el select -->
                 <div class="form-group">
                   <label>Buscar material</label>
                   <input type="text" id="buscar-material-proyecto" placeholder="Escribe código o nombre..." />
@@ -376,134 +375,154 @@
       </section>
 
       <!-- =============================
-           SECCIÓN: ADMIN ALMACÉN (ADMIN)
+           SECCIÓN: ADMIN ALMACÉN (NUEVO - LOTES)
            ============================= -->
       <section id="admin-almacen" class="seccion">
         <div class="section-title">
           <h3>Admin de Almacén (solo admin)</h3>
-          <p>Edición y ajustes de materiales con registro de usuario.</p>
+          <p>Control por lotes (proveedor/precio) + ajustes sin crear lote.</p>
         </div>
 
         <div class="grid-2">
+
+          <!-- Lista materiales -->
           <div class="card">
             <div class="card-header">
-              <h4>Materiales registrados</h4>
-            </div>
-
-            <div class="card-body table-wrapper">
-              <table class="table" id="tabla-admin-materiales">
-                <thead>
-                  <tr>
-                    <th>Código</th>
-                    <th>Nombre</th>
-                    <th>Stock</th>
-                    <th>Ubicación</th>
-                    <th>Acción</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <h4>Editar Material</h4>
+              <h4>Materiales</h4>
+              <p class="small">Selecciona uno para ver/administrar sus lotes.</p>
             </div>
 
             <div class="card-body">
-              <div id="admin-form-panel" style="display:none;">
-                <form id="form-editar-material" class="form">
-                  <div class="form-group">
-                    <label>Código</label>
-                    <input type="text" name="codigo" disabled />
-                  </div>
-
-                  <div class="form-group">
-                    <label>Nombre</label>
-                    <input type="text" name="nombre" />
-                  </div>
-
-                  <div class="form-group">
-                    <label>Stock mínimo</label>
-                    <input type="number" name="stock_minimo" step="0.01" />
-                  </div>
-
-                  <div class="form-group">
-                    <label>Ubicación</label>
-                    <input type="text" name="ubicacion" />
-                  </div>
-
-                  <hr class="divider">
-
-                  <div class="form-group">
-                    <label>Proveedor</label>
-                    <select id="select-proveedor-editar" name="proveedor_id">
-                      <option value="">—</option>
-                    </select>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Número de ticket</label>
-                    <input type="text" name="ticket_numero" />
-                  </div>
-
-                  <div class="form-group">
-                    <label>¿Requiere protocolo?</label>
-                    <select name="requiere_protocolo" id="select-requiere-protocolo-editar">
-                      <option value="0">No</option>
-                      <option value="1">Sí</option>
-                    </select>
-                  </div>
-
-                  <div class="form-group" id="grupo-protocolo-texto-editar" style="display:none;">
-                    <label>Protocolo (texto)</label>
-                    <input type="text" name="protocolo_texto" />
-                  </div>
-
-                  <div class="form-group">
-                    <label>Precio unitario</label>
-                    <input type="number" name="precio_unitario" step="0.01" />
-                  </div>
-
-                  <button class="btn-primary" type="submit">
-                    <span class="material-icons">save</span>
-                    Guardar cambios
-                  </button>
-                </form>
-
-                <hr class="divider">
-
-                <h4>Ajuste de Stock</h4>
-
-                <form id="form-ajuste-stock" class="form form-inline">
-                  <div class="form-group">
-                    <label>Tipo</label>
-                    <select name="tipo">
-                      <option value="entrada">Entrada</option>
-                      <option value="salida">Salida</option>
-                    </select>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Cantidad</label>
-                    <input type="number" name="cantidad" step="0.01" required />
-                  </div>
-
-                  <div class="form-group">
-                    <label>Comentario</label>
-                    <input type="text" name="comentario" />
-                  </div>
-
-                  <button class="btn-secondary" type="submit">
-                    <span class="material-icons">autorenew</span>
-                    Aplicar ajuste
-                  </button>
-                </form>
+              <div class="form-group" style="margin-bottom:12px;">
+                <label>Buscar material</label>
+                <input type="text" id="buscar-admin-material" placeholder="Código o nombre..." />
               </div>
 
-              <p class="hint">Seleccione un material para editar.</p>
+              <div class="table-wrapper">
+                <table class="table" id="tabla-admin-materiales">
+                  <thead>
+                    <tr>
+                      <th>Código</th>
+                      <th>Nombre</th>
+                      <th>Stock</th>
+                      <th>Ubicación</th>
+                      <th>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
             </div>
+          </div>
+
+          <!-- Panel lotes -->
+          <div class="card">
+            <div class="card-header">
+              <h4>Lotes del material</h4>
+              <p class="small">Material seleccionado: <span id="admin-material-seleccionado">Ninguno</span></p>
+            </div>
+
+            <div class="card-body" id="admin-lotes-panel" style="display:none;">
+              <div class="table-wrapper" style="margin-bottom:14px;">
+                <table class="table" id="tabla-admin-lotes">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Proveedor</th>
+                      <th>Precio</th>
+                      <th>Ticket</th>
+                      <th>Protocolo</th>
+                      <th>Inicial</th>
+                      <th>Disponible</th>
+                      <th>Creado</th>
+                      <th>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+
+              <hr class="divider">
+
+              <h4>Agregar lote (compra nueva)</h4>
+              <form id="form-crear-lote" class="form">
+                <div class="form-group">
+                  <label>Proveedor</label>
+                  <select id="select-proveedor-lote" name="proveedor_id">
+                    <option value="">—</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Precio unitario</label>
+                  <input type="number" step="0.01" name="precio_unitario" />
+                </div>
+
+                <div class="form-group">
+                  <label>Ticket</label>
+                  <input type="text" name="ticket_numero" />
+                </div>
+
+                <div class="form-group">
+                  <label>¿Requiere protocolo?</label>
+                  <select id="select-lote-requiere-protocolo" name="requiere_protocolo">
+                    <option value="0">No</option>
+                    <option value="1">Sí</option>
+                  </select>
+                </div>
+
+                <div class="form-group" id="grupo-lote-protocolo" style="display:none;">
+                  <label>Protocolo</label>
+                  <input type="text" name="protocolo_texto" />
+                </div>
+
+                <div class="form-group">
+                  <label>Cantidad a ingresar *</label>
+                  <input type="number" step="0.01" name="cantidad" required />
+                </div>
+
+                <button class="btn-primary" type="submit">
+                  <span class="material-icons">add</span> Crear lote y sumar stock
+                </button>
+              </form>
+
+              <hr class="divider">
+
+              <h4>Ajustar lote (corrección sin crear lote)</h4>
+              <form id="form-ajustar-lote" class="form form-inline">
+                <div class="form-group">
+                  <label>Lote</label>
+                  <select id="select-ajuste-lote" name="lote_id"></select>
+                </div>
+
+                <div class="form-group">
+                  <label>Tipo</label>
+                  <select name="tipo">
+                    <option value="entrada">Sumar</option>
+                    <option value="salida">Restar</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Cantidad *</label>
+                  <input type="number" step="0.01" name="cantidad" required />
+                </div>
+
+                <div class="form-group">
+                  <label>Comentario</label>
+                  <input type="text" name="comentario" />
+                </div>
+
+                <button class="btn-secondary" type="submit">
+                  <span class="material-icons">tune</span> Aplicar ajuste
+                </button>
+              </form>
+            </div>
+
+            <div class="card-body" id="admin-lotes-vacio">
+              <p class="hint">Selecciona un material para ver sus lotes.</p>
+            </div>
+
           </div>
         </div>
       </section>
