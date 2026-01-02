@@ -127,10 +127,13 @@ document.querySelectorAll(".nav-btn").forEach(btn => {
   btn.addEventListener("click", () => mostrarSeccion(btn.dataset.section));
 });
 
-/* ==================== EXPORT HELPERS ==================== */
+/* ==================== EXPORT MATERIALES ==================== */
 
 async function descargarArchivo(url, nombreArchivo) {
   const res = await apiFetch(url);
+
+  // log útil para ver el error exacto en consola
+  console.log("EXPORT", url, "STATUS", res.status);
 
   if (res.status === 403) {
     alert("No tienes permisos para exportar.");
@@ -140,7 +143,7 @@ async function descargarArchivo(url, nombreArchivo) {
   if (!res.ok) {
     const txt = await res.text().catch(() => "");
     console.error("Export error:", res.status, txt);
-    alert("No se pudo exportar.");
+    alert(`No se pudo exportar. (${res.status})`);
     return;
   }
 
@@ -158,9 +161,11 @@ async function descargarArchivo(url, nombreArchivo) {
 document.getElementById("btn-export-materiales-excel")?.addEventListener("click", () => {
   descargarArchivo(`${API_BASE}/materiales/export/excel`, "materiales.xlsx");
 });
+
 document.getElementById("btn-export-materiales-pdf")?.addEventListener("click", () => {
   descargarArchivo(`${API_BASE}/materiales/export/pdf`, "materiales.pdf");
 });
+
 
 /* ==================== PROVEEDORES (API) ==================== */
 
@@ -912,7 +917,7 @@ document.getElementById("form-usuario")?.addEventListener("submit", async (e) =>
 
   aplicarUIporRol();
 
-  document.getElementById("btn-logout")?.addEventListener("click", logout);
+  document.getElementById("btn-logout")?.addEventListener("click", logout);``
 
   cargarProveedores();
   cargarMateriales();
