@@ -653,67 +653,63 @@ document.getElementById("buscar-material-proyecto")?.addEventListener("input", (
   renderSelectMateriales(filtrarMaterialesSelect(q));
 });
 
-/* ==================== MOVIMIENTOS (PROYECTO / ETAPA) ==================== */
+/* ==================== MATERIALES EN PROYECTO (BUSCADOR + SELECT) ==================== */
 
-async function cargarMovimientosDeProyecto(proyectoId) {
-  const res = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoId}/movimientos`);
-  const data = await res.json();
 
-  const tbody = document.querySelector("#tabla-movimientos-proyecto tbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
+function renderSelectMateriales(lista) {
+  const select = document.getElementById("select-material-proyecto");
+  if (!select) return;
 
-  if (!data.ok) return alert(data.message || "Error al cargar movimientos del proyecto");
+  const actual = select.value; // mantener selección si es posible
+  select.innerHTML = "";
 
-  data.movimientos.forEach(mv => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${new Date(mv.creado_en).toLocaleString()}</td>
-      <td>${mv.codigo} - ${mv.nombre}</td>
-      <td>${mv.tipo}</td>
-      <td>${mv.cantidad}</td>
-      <td>${mv.comentario || ""}</td>
-      <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
-    `;
-    tbody.appendChild(tr);
+  lista.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m.id;
+    opt.textContent = `${m.codigo} - ${m.nombre} (stock: ${m.stock_actual})`;
+    select.appendChild(opt);
+  });
+
+  if ([...select.options].some(o => o.value === actual)) {
+    select.value = actual;
+  }
+}
+
+function filtrarMaterialesSelect(q) {
+  q = (q || "").trim().toLowerCase();
+  if (!q) return materialesSelectCache;
+
+  return materialesSelectCache.filter(m => {
+    const texto = `${m.codigo} ${m.nombre}`.toLowerCase();
+    return texto.includes(q);
   });
 }
 
-async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
-  const res = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoId}/etapa/${etapaId}/movimientos`);
+async function cargarMaterialesEnSelectProyecto() {
+  const res = await apiFetch(`${API_BASE}/materiales`);
   const data = await res.json();
 
-  const tbody = document.querySelector("#tabla-movimientos-proyecto tbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  if (!data.ok) return alert(data.message || "Error al cargar movimientos de la etapa");
-
-  data.movimientos.forEach(mv => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${new Date(mv.creado_en).toLocaleString()}</td>
-      <td>${mv.codigo} - ${mv.nombre}</td>
-      <td>${mv.tipo}</td>
-      <td>${mv.cantidad}</td>
-      <td>${mv.comentario || ""}</td>
-      <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-async function refrescarMovimientosProyecto() {
-  if (!proyectoSeleccionadoId) return;
-
-  if (etapaSeleccionadaId === "__ALL__") {
-    await cargarMovimientosDeProyecto(proyectoSeleccionadoId);
-  } else {
-    await cargarMovimientosDeProyectoPorEtapa(proyectoSeleccionadoId, etapaSeleccionadaId);
+  if (!data.ok) {
+    alert(data.message || "Error al cargar materiales para proyectos");
+    return;
   }
 
-  await calcularTotalesProyectoYEtapa();
+  materialesSelectCache = data.materiales || [];
+
+  const q = document.getElementById("buscar-material-proyecto")?.value || "";
+  renderSelectMateriales(filtrarMaterialesSelect(q));
 }
+
+// ✅ engancha el listener cuando ya existe el input en el DOM
+(function initBuscadorMaterialProyecto() {
+  const input = document.getElementById("buscar-material-proyecto");
+  if (!input) return;
+
+  input.addEventListener("input", () => {
+    renderSelectMateriales(filtrarMaterialesSelect(input.value));
+  });
+})();
+
 
 /* ==================== TOTALES + EXPORT ETAPA ==================== */
 

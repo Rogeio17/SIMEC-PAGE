@@ -389,3 +389,11 @@ button {
 .btn-logout {
   margin-left: auto;
 }
+.card,
+.card-body,
+.form-inline {
+  overflow: visible !important;
+}
+#select-material-proyecto {
+  min-width: 280px;
+}
