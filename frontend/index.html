@@ -98,23 +98,31 @@
               </div>
             </div>
 
-            <div class="card-body table-wrapper">
-              <table class="table" id="tabla-materiales">
-                <thead>
-                  <tr>
-                    <th>Código</th>
-                    <th>Nombre</th>
-                    <th>Stock</th>
-                    <th>Ubicación</th>
-                    <th>Proveedor</th>
-                    <th>Ticket</th>
-                    <th>Protocolo</th>
-                    <th>Precio</th>
-                    <th>Creado por</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
+            <!-- ✅ Buscador materiales -->
+            <div class="card-body">
+              <div class="form-group" style="margin-bottom:12px;">
+                <label>Buscar material</label>
+                <input type="text" id="buscar-materiales" placeholder="Código, nombre, proveedor, ticket..." />
+              </div>
+
+              <div class="table-wrapper">
+                <table class="table" id="tabla-materiales">
+                  <thead>
+                    <tr>
+                      <th>Código</th>
+                      <th>Nombre</th>
+                      <th>Stock</th>
+                      <th>Ubicación</th>
+                      <th>Proveedor</th>
+                      <th>Ticket</th>
+                      <th>Protocolo</th>
+                      <th>Precio</th>
+                      <th>Creado por</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -313,6 +321,13 @@
 
             <div class="card-body">
               <form id="form-salida-proyecto" class="form form-inline">
+
+                <!-- ✅ Buscador para filtrar el select -->
+                <div class="form-group">
+                  <label>Buscar material</label>
+                  <input type="text" id="buscar-material-proyecto" placeholder="Escribe código o nombre..." />
+                </div>
+
                 <div class="form-group">
                   <label>Material</label>
                   <select id="select-material-proyecto" name="material_id"></select>

@@ -242,6 +242,13 @@ async function cargarMateriales() {
     alert(data.message || "Error al cargar materiales");
     return;
   }
+   // guardamos cache
+  materialesCache = data.materiales || [];
+
+  // si hay búsqueda escrita, respétala
+  const q = document.getElementById("buscar-materiales")?.value || "";
+  renderMaterialesTabla(filtrarMateriales(q));
+
 
   data.materiales.forEach(m => {
     const tr = document.createElement("tr");
@@ -296,6 +303,59 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
   await cargarMaterialesEnSelectProyecto();
 });
 
+/* ==================== BUSCADOR: MATERIALES ==================== */
+
+let materialesCache = []; // guardamos lista para filtrar sin recargar
+
+function renderMaterialesTabla(lista) {
+  const tbody = document.querySelector("#tabla-materiales tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  lista.forEach(m => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${m.codigo}</td>
+      <td>${m.nombre}</td>
+      <td>${m.stock_actual}</td>
+      <td>${m.ubicacion || ""}</td>
+      <td>${m.proveedor_nombre || ""}</td>
+      <td>${m.ticket_numero || ""}</td>
+      <td>${m.requiere_protocolo ? (m.protocolo_texto || "Sí") : "No"}</td>
+      <td>${m.precio_unitario ?? ""}</td>
+      <td>${m.creado_por_nombre || m.creado_por_email || "-"}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function filtrarMateriales(q) {
+  q = (q || "").trim().toLowerCase();
+  if (!q) return materialesCache;
+
+  return materialesCache.filter(m => {
+    const texto = [
+      m.codigo,
+      m.nombre,
+      m.ubicacion,
+      m.proveedor_nombre,
+      m.ticket_numero,
+      m.protocolo_texto,
+      m.creado_por_nombre,
+      m.creado_por_email
+    ].join(" ").toLowerCase();
+
+    return texto.includes(q);
+  });
+}
+
+document.getElementById("buscar-materiales")?.addEventListener("input", (e) => {
+  const q = e.target.value;
+  const filtrados = filtrarMateriales(q);
+  renderMaterialesTabla(filtrados);
+});
+
+
 /* ==================== PROYECTOS ==================== */
 
 let proyectoSeleccionadoId = null;
@@ -330,6 +390,46 @@ async function cargarProyectos() {
     const acciones = document.createElement("div");
     acciones.style.display = "flex";
     acciones.style.gap = "8px";
+
+    /* ==================== BUSCADOR: SELECT MATERIAL EN PROYECTOS ==================== */
+
+let materialesSelectCache = []; // lista para filtrar options
+
+function renderSelectMateriales(lista) {
+  const select = document.getElementById("select-material-proyecto");
+  if (!select) return;
+
+  const actual = select.value; // mantener selección si existe
+  select.innerHTML = "";
+
+  lista.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m.id;
+    opt.textContent = `${m.codigo} - ${m.nombre} (stock: ${m.stock_actual})`;
+    select.appendChild(opt);
+  });
+
+  // si la selección anterior existe aún, re-asignar
+  if ([...select.options].some(o => o.value === actual)) {
+    select.value = actual;
+  }
+}
+
+function filtrarMaterialesSelect(q) {
+  q = (q || "").trim().toLowerCase();
+  if (!q) return materialesSelectCache;
+
+  return materialesSelectCache.filter(m => {
+    const texto = `${m.codigo} ${m.nombre}`.toLowerCase();
+    return texto.includes(q);
+  });
+}
+
+document.getElementById("buscar-material-proyecto")?.addEventListener("input", (e) => {
+  const q = e.target.value;
+  renderSelectMateriales(filtrarMaterialesSelect(q));
+});
+
 
     // export proyecto completo (admin si backend lo restringe)
     const btnXlsx = document.createElement("button");
@@ -500,54 +600,57 @@ document.getElementById("btn-cerrar-etapa")?.addEventListener("click", async () 
 
 /* ==================== MATERIALES EN PROYECTO ==================== */
 
-async function cargarMaterialesEnSelectProyecto() {
-  const res = await apiFetch(`${API_BASE}/materiales`);
-  const data = await res.json();
+// cache para filtrar el select sin volver a pedir API cada tecla
+let materialesSelectCache = [];
 
+// renderiza options del select
+function renderSelectMateriales(lista) {
   const select = document.getElementById("select-material-proyecto");
   if (!select) return;
+
+  const actual = select.value; // intenta mantener selección
   select.innerHTML = "";
 
-  if (!data.ok) return alert(data.message || "Error al cargar materiales para proyectos");
-
-  data.materiales.forEach(m => {
+  lista.forEach(m => {
     const opt = document.createElement("option");
     opt.value = m.id;
     opt.textContent = `${m.codigo} - ${m.nombre} (stock: ${m.stock_actual})`;
     select.appendChild(opt);
   });
+
+  if ([...select.options].some(o => o.value === actual)) {
+    select.value = actual;
+  }
 }
 
-document.getElementById("form-salida-proyecto")?.addEventListener("submit", async (e) => {
-  e.preventDefault();
+// filtra por código o nombre
+function filtrarMaterialesSelect(q) {
+  q = (q || "").trim().toLowerCase();
+  if (!q) return materialesSelectCache;
 
-  if (!esAdmin()) return alert("Solo admin puede registrar salidas.");
-  if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero");
-  if (!etapaActivaId) return alert("No hay etapa activa. Crea una etapa primero.");
-
-  const form = e.target;
-
-  const payload = {
-    material_id: parseInt(form.material_id.value),
-    cantidad: parseFloat(form.cantidad.value),
-    comentario: form.comentario.value.trim() || null,
-    etapa_id: etapaActivaId
-  };
-
-  const res = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoSeleccionadoId}/salida`, {
-    method: "POST",
-    body: JSON.stringify(payload)
+  return materialesSelectCache.filter(m => {
+    const texto = `${m.codigo} ${m.nombre}`.toLowerCase();
+    return texto.includes(q);
   });
+}
 
+// carga materiales una vez y luego filtra en cliente
+async function cargarMaterialesEnSelectProyecto() {
+  const res = await apiFetch(`${API_BASE}/materiales`);
   const data = await res.json();
-  if (!data.ok) return alert(data.message || "Error al asignar material");
 
-  alert("Material asignado al proyecto");
-  form.reset();
+  if (!data.ok) return alert(data.message || "Error al cargar materiales para proyectos");
 
-  await refrescarMovimientosProyecto();
-  await cargarMateriales();
-  await cargarMaterialesEnSelectProyecto();
+  materialesSelectCache = data.materiales || [];
+
+  const q = document.getElementById("buscar-material-proyecto")?.value || "";
+  renderSelectMateriales(filtrarMaterialesSelect(q));
+}
+
+// listener del buscador (ponlo UNA sola vez)
+document.getElementById("buscar-material-proyecto")?.addEventListener("input", (e) => {
+  const q = e.target.value;
+  renderSelectMateriales(filtrarMaterialesSelect(q));
 });
 
 /* ==================== MOVIMIENTOS (PROYECTO / ETAPA) ==================== */
