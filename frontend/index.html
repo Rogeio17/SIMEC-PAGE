@@ -533,88 +533,91 @@
               <hr class="divider">
 
               <h4>Agregar lote (compra nueva)</h4>
-              <form id="form-crear-lote" class="form">
-                <div class="form-group">
-                  <label>Nombre de lote *</label>
-                  <input type="text" name="nombre_lote" placeholder="Ej: COMPRA ENE-2026" required />
-                </div>
+<form id="form-crear-lote" class="form">
 
-                <div class="form-group">
-                  <label>Proveedor</label>
-                  <select id="select-proveedor-lote" name="proveedor_id">
-                    <option value="">—</option>
-                  </select>
+  <!-- ✅ NUEVO: lote_codigo requerido por backend -->
+  <div class="form-group">
+    <label>Lote / Código de lote *</label>
+    <input type="text" name="lote_codigo" placeholder="Ej: LOTE-001 / Factura-123" required />
+  </div>
 
-                  <small class="small">Si no existe, registra uno nuevo:</small>
-                  <div style="display:flex; gap:8px; margin-top:6px;">
-                    <input type="text" id="nuevo-proveedor-nombre-lote" placeholder="Nombre proveedor" />
-                    <button class="btn-secondary" type="button" id="btn-crear-proveedor-lote">Agregar</button>
-                  </div>
-                </div>
+  <div class="form-group">
+    <label>Proveedor</label>
+    <select id="select-proveedor-lote" name="proveedor_id">
+      <option value="">—</option>
+    </select>
 
-                <div class="form-group">
-                  <label>Precio unitario</label>
-                  <input type="number" step="0.01" name="precio_unitario" />
-                </div>
+    <!-- ✅ NUEVO: crear proveedor aquí también -->
+    <small class="small">Si no existe, crea uno:</small>
+    <div style="display:flex; gap:8px; margin-top:6px;">
+      <input type="text" id="nuevo-proveedor-nombre-lote" placeholder="Nombre proveedor" />
+      <button class="btn-secondary" type="button" id="btn-crear-proveedor-lote">Agregar</button>
+    </div>
+  </div>
 
-                <div class="form-group">
-                  <label>Ticket</label>
-                  <input type="text" name="ticket_numero" />
-                </div>
+  <div class="form-group">
+    <label>Precio unitario</label>
+    <input type="number" step="0.01" name="precio_unitario" />
+  </div>
 
-                <div class="form-group">
-                  <label>¿Requiere protocolo?</label>
-                  <select id="select-lote-requiere-protocolo" name="requiere_protocolo">
-                    <option value="0">No</option>
-                    <option value="1">Sí</option>
-                  </select>
-                </div>
+  <div class="form-group">
+    <label>Ticket</label>
+    <input type="text" name="ticket_numero" />
+  </div>
 
-                <div class="form-group" id="grupo-lote-protocolo" style="display:none;">
-                  <label>Protocolo</label>
-                  <input type="text" name="protocolo_texto" />
-                </div>
+  <div class="form-group">
+    <label>¿Requiere protocolo?</label>
+    <select id="select-lote-requiere-protocolo" name="requiere_protocolo">
+      <option value="0">No</option>
+      <option value="1">Sí</option>
+    </select>
+  </div>
 
-                <div class="form-group">
-                  <label>Cantidad a ingresar *</label>
-                  <input type="number" step="0.01" name="cantidad" required />
-                </div>
+  <div class="form-group" id="grupo-lote-protocolo" style="display:none;">
+    <label>Protocolo</label>
+    <input type="text" name="protocolo_texto" />
+  </div>
 
-                <button class="btn-primary" type="submit">
-                  <span class="material-icons">add</span> Crear lote y sumar stock
-                </button>
-              </form>
+  <div class="form-group">
+    <label>Cantidad a ingresar *</label>
+    <input type="number" step="0.01" name="cantidad" required />
+  </div>
 
-              <hr class="divider">
+  <button class="btn-primary" type="submit">
+    <span class="material-icons">add</span> Crear lote y sumar stock
+  </button>
+</form>
 
-              <h4>Ajustar cantidad de lote (corrección sin crear lote)</h4>
-              <form id="form-ajustar-lote" class="form form-inline">
-                <div class="form-group">
-                  <label>Lote</label>
-                  <select id="select-ajuste-lote" name="lote_id"></select>
-                </div>
+<hr class="divider">
 
-                <div class="form-group">
-                  <label>Tipo</label>
-                  <select name="tipo">
-                    <option value="entrada">Sumar</option>
-                    <option value="salida">Restar</option>
-                  </select>
-                </div>
+<h4>Ajustar lote (corrección sin crear lote)</h4>
+<form id="form-ajustar-lote" class="form form-inline">
+  <div class="form-group">
+    <label>Lote</label>
+    <select id="select-ajuste-lote" name="lote_id"></select>
+  </div>
 
-                <div class="form-group">
-                  <label>Cantidad *</label>
-                  <input type="number" step="0.01" name="cantidad" required />
-                </div>
+  <div class="form-group">
+    <label>Tipo</label>
+    <select name="tipo">
+            <option value="entrada">Sumar</option>
+            <option value="salida">Restar</option>
+            </select>
+            </div>
 
-                <div class="form-group">
-                  <label>Comentario</label>
-                  <input type="text" name="comentario" />
-                </div>
+           <div class="form-group">
+           <label>Cantidad *</label>
+             <input type="number" step="0.01" name="cantidad" required />
+             </div>
 
-                <button class="btn-secondary" type="submit">
-                  <span class="material-icons">tune</span> Aplicar ajuste
-                </button>
+              <div class="form-group">
+            <label>Comentario</label>
+              <input type="text" name="comentario" />
+              </div>
+
+              <button class="btn-secondary" type="submit">
+             <span class="material-icons">tune</span> Aplicar ajuste
+              </button>
               </form>
 
               <hr class="divider">

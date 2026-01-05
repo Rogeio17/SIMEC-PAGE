@@ -158,21 +158,28 @@ document.getElementById("btn-export-materiales-pdf")?.addEventListener("click", 
 
 async function cargarProveedores() {
   const select1 = document.getElementById("select-proveedor-material");
-  if (!select1) return;
+  const select2 = document.getElementById("select-proveedor-lote"); // ✅ para lotes
+  if (!select1 && !select2) return;
 
   const res = await apiFetch(`${API_BASE}/proveedores`);
   const data = await res.json();
 
-  select1.innerHTML = `<option value="">—</option>`;
+  const llenar = (sel) => {
+    if (!sel) return;
+    sel.innerHTML = `<option value="">—</option>`;
 
-  if (data.ok && Array.isArray(data.proveedores)) {
-    data.proveedores.forEach(p => {
-      const opt = document.createElement("option");
-      opt.value = p.id;
-      opt.textContent = p.nombre;
-      select1.appendChild(opt);
-    });
-  }
+    if (data.ok && Array.isArray(data.proveedores)) {
+      data.proveedores.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.nombre;
+        sel.appendChild(opt);
+      });
+    }
+  };
+
+  llenar(select1);
+  llenar(select2);
 }
 
 document.getElementById("btn-crear-proveedor")?.addEventListener("click", async () => {
@@ -191,6 +198,32 @@ document.getElementById("btn-crear-proveedor")?.addEventListener("click", async 
   if (!data.ok) return alert(data.message || "No se pudo crear proveedor.");
 
   input.value = "";
+  await cargarProveedores();
+  alert("Proveedor registrado");
+});
+
+/* =========================================================
+   ✅ PARTE A) CREAR PROVEEDOR TAMBIÉN DESDE "AGREGAR LOTE"
+   Requiere en HTML:
+   - input#nuevo-proveedor-nombre-lote
+   - button#btn-crear-proveedor-lote
+   ========================================================= */
+document.getElementById("btn-crear-proveedor-lote")?.addEventListener("click", async () => {
+  if (!esAdmin()) return alert("Solo admin puede registrar proveedores.");
+
+  const input = document.getElementById("nuevo-proveedor-nombre-lote");
+  const nombre = (input?.value || "").trim();
+  if (!nombre) return alert("Escribe el nombre del proveedor.");
+
+  const res = await apiFetch(`${API_BASE}/proveedores`, {
+    method: "POST",
+    body: JSON.stringify({ nombre })
+  });
+  const data = await res.json().catch(() => ({}));
+
+  if (!data.ok) return alert(data.message || "No se pudo crear proveedor.");
+
+  if (input) input.value = "";
   await cargarProveedores();
   alert("Proveedor registrado");
 });
@@ -793,7 +826,6 @@ async function seleccionarMaterialAdmin(materialId, silencioso = false) {
 
   setAdminPanelVisible(true);
 
-  
   const f = document.getElementById("form-editar-material-base");
   if (f) {
     f.nombre.value = mat.nombre || "";
@@ -896,7 +928,13 @@ document.getElementById("form-editar-material-base")?.addEventListener("submit",
   await cargarAdminMateriales(true);
 });
 
-/* ====== Crear lote ====== */
+/* =========================================================
+   ✅ PARTE B) CREAR LOTE (ENVÍA lote_codigo REQUERIDO)
+   Requiere en HTML:
+   - input name="lote_codigo" dentro de form-crear-lote
+   (si tu HTML tiene name="nombre_lote", cámbialo a lote_codigo
+    o deja ambos y aquí tomo lote_codigo primero)
+   ========================================================= */
 
 document.getElementById("form-crear-lote")?.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -906,14 +944,13 @@ document.getElementById("form-crear-lote")?.addEventListener("submit", async (e)
   const form = e.target;
 
   const requiere = form.requiere_protocolo.value === "1";
-  const nombreLote = (form.nombre_lote.value || "").trim();
-  if (!nombreLote) return alert("Nombre de lote es requerido.");
+
+  // ✅ usa lote_codigo; si no existe, intenta nombre_lote
+  const loteCodigo = (form.lote_codigo?.value || form.nombre_lote?.value || "").trim();
+  if (!loteCodigo) return alert("Lote / Código de lote es requerido.");
 
   const payload = {
-    
-    nombre_lote: nombreLote,
-    lote_codigo: nombreLote,
-
+    lote_codigo: loteCodigo,
     proveedor_id: form.proveedor_id.value ? Number(form.proveedor_id.value) : null,
     precio_unitario: form.precio_unitario.value !== "" ? Number(form.precio_unitario.value) : null,
     ticket_numero: form.ticket_numero.value.trim() || null,
@@ -940,7 +977,10 @@ document.getElementById("form-crear-lote")?.addEventListener("submit", async (e)
   await cargarLotesMaterial(adminMaterialSeleccionado.id, true);
 });
 
-/* ====== Ajustar lote (delta) ====== */
+/* =========================================================
+   ✅ PARTE C) AJUSTAR LOTE (RUTA /ajustar + ENVÍA delta)
+   Tu backend espera { delta, comentario }
+   ========================================================= */
 
 document.getElementById("form-ajustar-lote")?.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -961,7 +1001,6 @@ document.getElementById("form-ajustar-lote")?.addEventListener("submit", async (
     comentario: form.comentario.value.trim() || null
   };
 
-  // ✅ tu ruta backend es /ajustar (no /ajuste)
   const res = await apiFetch(`${API_BASE}/lotes/${loteId}/ajustar`, {
     method: "POST",
     body: JSON.stringify(payload)
@@ -1020,10 +1059,7 @@ document.getElementById("form-editar-lote")?.addEventListener("submit", async (e
   const requiere = form.requiere_protocolo.value === "1";
 
   const payload = {
-    // compatibilidad
-    nombre_lote: nombreLote,
     lote_codigo: nombreLote,
-
     proveedor_id: form.proveedor_id.value ? Number(form.proveedor_id.value) : null,
     precio_unitario: form.precio_unitario.value !== "" ? Number(form.precio_unitario.value) : null,
     ticket_numero: form.ticket_numero.value.trim() || null,

@@ -134,6 +134,7 @@ export async function actualizarMaterial(req, res) {
     const id = Number(req.params.id);
 
     const {
+      codigo = null,       
       nombre,
       stock_minimo = 0,
       ubicacion = null,
@@ -143,44 +144,61 @@ export async function actualizarMaterial(req, res) {
       return res.status(400).json({ ok: false, message: "Nombre es requerido" });
     }
 
-    await pool.query(
-      `UPDATE materiales
-       SET nombre = ?,
-           stock_minimo = ?,
-           ubicacion = ?,
-           actualizado_por_usuario_id = ?
-       WHERE id = ?`,
-      [
-        String(nombre).trim(),
-        Number(stock_minimo) || 0,
-        ubicacion || null,
-        req.user?.id ?? null,
-        id,
-      ]
-    );
+    let codigoFinal = null;
+    if (codigo !== null && String(codigo).trim() !== "") {
+      const cod = String(codigo).trim();
+
+      const [dup] = await pool.query(
+        "SELECT id FROM materiales WHERE codigo = ? AND id <> ? LIMIT 1",
+        [cod, id]
+      );
+      if (dup.length) {
+        return res.status(409).json({ ok: false, message: "Ese código ya existe en otro material" });
+      }
+
+      codigoFinal = cod;
+    }
+
+  
+    if (codigoFinal === null) {
+      await pool.query(
+        `UPDATE materiales
+         SET nombre = ?,
+             stock_minimo = ?,
+             ubicacion = ?,
+             actualizado_por_usuario_id = ?
+         WHERE id = ?`,
+        [
+          String(nombre).trim(),
+          Number(stock_minimo) || 0,
+          ubicacion || null,
+          req.user?.id ?? null,
+          id,
+        ]
+      );
+    } else {
+      await pool.query(
+        `UPDATE materiales
+         SET codigo = ?,
+             nombre = ?,
+             stock_minimo = ?,
+             ubicacion = ?,
+             actualizado_por_usuario_id = ?
+         WHERE id = ?`,
+        [
+          codigoFinal,
+          String(nombre).trim(),
+          Number(stock_minimo) || 0,
+          ubicacion || null,
+          req.user?.id ?? null,
+          id,
+        ]
+      );
+    }
 
     res.json({ ok: true, message: "Material actualizado" });
   } catch (err) {
     console.error("❌ actualizarMaterial:", err);
     res.status(500).json({ ok: false, message: "Error al actualizar material" });
-  }
-}
-
-export async function eliminarMaterial(req, res) {
-  try {
-    const id = Number(req.params.id);
-
-    await pool.query(
-      `UPDATE materiales
-       SET activo = 0,
-           actualizado_por_usuario_id = ?
-       WHERE id = ?`,
-      [req.user?.id ?? null, id]
-    );
-
-    res.json({ ok: true, message: "Material desactivado" });
-  } catch (err) {
-    console.error("❌ eliminarMaterial:", err);
-    res.status(500).json({ ok: false, message: "Error al eliminar material" });
   }
 }
