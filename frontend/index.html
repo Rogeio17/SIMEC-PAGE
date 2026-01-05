@@ -434,6 +434,12 @@
                   <input type="text" name="nombre" required />
                 </div>
 
+                <!-- ✅ FIX: ESTE INPUT FALTABA Y CAUSABA el error .value -->
+                <div class="form-group">
+                  <label>Stock mínimo</label>
+                  <input type="number" name="stock_minimo" step="0.01" />
+                </div>
+
                 <div class="form-group">
                  <label>Nombre de Lote (opcional)</label>
                   <input type="text" name="nombre_lote" placeholder="Ej: COMPRA-ENE-2026 / INICIAL..." />
