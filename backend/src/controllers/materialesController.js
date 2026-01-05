@@ -38,14 +38,14 @@ export async function crearMaterial(req, res) {
       stock_minimo = 0,
       ubicacion = null,
 
-      // opcionales (si quieres guardarlos en lote inicial)
+     
       proveedor_id = null,
       ticket_numero = null,
       requiere_protocolo = 0,
       protocolo_texto = null,
       precio_unitario = null,
 
-      // NUEVO: nombre de lote desde el frontend
+      
       lote_codigo = null,
       nombre_lote = null
     } = req.body;

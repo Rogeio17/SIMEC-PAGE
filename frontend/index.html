@@ -73,104 +73,147 @@
       </header>
 
       <!-- =============================
-           SECCIÓN: MATERIALES
-           ============================= -->
-      <section id="materiales" class="seccion activa">
-        <div class="section-title">
-          <h3>Materiales</h3>
-          <p>Alta y consulta de materiales registrados.</p>
+     SECCIÓN: MATERIALES
+     ============================= -->
+<section id="materiales" class="seccion activa">
+  <div class="section-title">
+    <h3>Materiales</h3>
+    <p>Alta y consulta de materiales registrados.</p>
+  </div>
+
+  <div class="grid-2">
+
+    <!-- Tabla materiales -->
+    <div class="card">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <h4>Lista de materiales</h4>
+
+        <div style="display:flex; gap:10px;">
+          <button class="btn-secondary" type="button" id="btn-export-materiales-excel" style="display:none;">
+            Exportar Excel
+          </button>
+          <button class="btn-secondary" type="button" id="btn-export-materiales-pdf" style="display:none;">
+            Exportar PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Buscador -->
+      <div class="card-body">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>Buscar material</label>
+          <input type="text" id="buscar-materiales" placeholder="Código, nombre, proveedor, ticket..." />
         </div>
 
-        <div class="grid-2">
+        <div class="table-wrapper">
+          <table class="table" id="tabla-materiales">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Stock</th>
+                <th>Ubicación</th>
+                <th>Proveedor</th>
+                <th>Ticket</th>
+                <th>Protocolo</th>
+                <th>Precio</th>
+                <th>Creado por</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
-          <!-- Tabla materiales -->
-          <div class="card">
-            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-              <h4>Lista de materiales</h4>
+    <!-- Form nuevo material -->
+    <div class="card">
+      <div class="card-header">
+        <h4>Registrar nuevo material (solo admin)</h4>
+        <p class="small">Todos los campos extra son opcionales (proveedor, ticket, protocolo, precio).</p>
+      </div>
 
-              <div style="display:flex; gap:10px;">
-                <button class="btn-secondary" type="button" id="btn-export-materiales-excel" style="display:none;">
-                  Exportar Excel
-                </button>
-                <button class="btn-secondary" type="button" id="btn-export-materiales-pdf" style="display:none;">
-                  Exportar PDF
-                </button>
-              </div>
-            </div>
+      <div class="card-body">
+        <form id="form-material" class="form">
 
-            <!-- Buscador -->
-            <div class="card-body">
-              <div class="form-group" style="margin-bottom:12px;">
-                <label>Buscar material</label>
-                <input type="text" id="buscar-materiales" placeholder="Código, nombre..." />
-              </div>
+          <div class="form-group">
+            <label>Código *</label>
+            <input type="text" name="codigo" required />
+          </div>
 
-              <div class="table-wrapper">
-                <table class="table" id="tabla-materiales">
-                  <thead>
-                    <tr>
-                      <th>Código</th>
-                      <th>Nombre</th>
-                      <th>Stock</th>
-                      <th>Ubicación</th>
-                      <th>Creado por</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-              </div>
+          <div class="form-group">
+            <label>Nombre *</label>
+            <input type="text" name="nombre" required />
+          </div>
+
+          <div class="form-group">
+            <label>Stock inicial</label>
+            <input type="number" name="stock_inicial" step="0.01" />
+          </div>
+
+          <div class="form-group">
+            <label>Stock mínimo</label>
+            <input type="number" name="stock_minimo" step="0.01" />
+          </div>
+
+          <div class="form-group">
+            <label>Ubicación</label>
+            <input type="text" name="ubicacion" />
+          </div>
+
+          <hr class="divider">
+
+          <div class="form-group">
+            <label>Proveedor (opcional)</label>
+            <select id="select-proveedor-material" name="proveedor_id">
+              <option value="">—</option>
+            </select>
+
+            <small class="small">Si no existe, registra uno nuevo:</small>
+            <div style="display:flex; gap:8px; margin-top:6px;">
+              <input type="text" id="nuevo-proveedor-nombre" placeholder="Nombre proveedor" />
+              <button class="btn-secondary" type="button" id="btn-crear-proveedor">Agregar</button>
             </div>
           </div>
 
-          <!-- Form nuevo material -->
-          <div class="card">
-            <div class="card-header">
-              <h4>Registrar nuevo material (solo admin)</h4>
-              <p class="small">Crea el material. Si pones stock inicial, tu backend debería crear lote inicial.</p>
-            </div>
-
-            <div class="card-body">
-              <form id="form-material" class="form">
-
-                <div class="form-group">
-                  <label>Código *</label>
-                  <input type="text" name="codigo" required />
-                </div>
-
-                <div class="form-group">
-                  <label>Nombre *</label>
-                  <input type="text" name="nombre" required />
-                </div>
-
-                <div class="form-group">
-                  <label>Stock inicial</label>
-                  <input type="number" name="stock_inicial" step="0.01" />
-                </div>
-
-                <div class="form-group">
-                  <label>Stock mínimo</label>
-                  <input type="number" name="stock_minimo" step="0.01" />
-                </div>
-
-                <div class="form-group">
-                  <label>Ubicación</label>
-                  <input type="text" name="ubicacion" />
-                </div>
-
-                <button class="btn-primary" type="submit" id="btn-guardar-material" disabled>
-                  <span class="material-icons">save</span> Guardar
-                </button>
-
-                <p class="hint" id="hint-material-admin" style="margin-top:8px;">
-                  Solo admin puede crear materiales.
-                </p>
-              </form>
-            </div>
+          <div class="form-group">
+            <label>Número de ticket (opcional)</label>
+            <input type="text" name="ticket_numero" />
           </div>
 
-        </div>
-      </section>
+          <div class="form-group">
+            <label>¿Requiere protocolo? (opcional)</label>
+            <select name="requiere_protocolo" id="select-requiere-protocolo">
+              <option value="0">No</option>
+              <option value="1">Sí</option>
+            </select>
+          </div>
 
+          <div class="form-group" id="grupo-protocolo-texto" style="display:none;">
+            <label>Protocolo (texto)</label>
+            <input type="text" name="protocolo_texto" placeholder="Ej: PROT-123 / Instrucciones..." />
+          </div>
+
+          <div class="form-group">
+            <label>Precio unitario (opcional)</label>
+            <input type="number" name="precio_unitario" step="0.01" />
+          </div>
+
+          <button class="btn-primary" type="submit" id="btn-guardar-material" disabled>
+            <span class="material-icons">save</span> Guardar
+          </button>
+
+          <p class="hint" id="hint-material-admin" style="margin-top:8px;">
+            Solo admin puede crear materiales.
+          </p>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+       
       <!-- =============================
            SECCIÓN: PROYECTOS + ETAPAS
            ============================= -->

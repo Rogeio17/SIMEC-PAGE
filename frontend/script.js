@@ -154,45 +154,31 @@ document.getElementById("btn-export-materiales-pdf")?.addEventListener("click", 
   descargarArchivo(`${API_BASE}/materiales/export/pdf`, "materiales.pdf");
 });
 
-/* ==================== PROVEEDORES ==================== */
-
-let proveedoresCache = [];
+/* ==================== PROVEEDORES (para Materiales) ==================== */
 
 async function cargarProveedores() {
-  const selects = [
-    document.getElementById("select-proveedor-lote"),
-    document.getElementById("select-proveedor-editar-lote"),
-  ].filter(Boolean);
-
-  if (!selects.length) return;
+  const select1 = document.getElementById("select-proveedor-material");
+  if (!select1) return;
 
   const res = await apiFetch(`${API_BASE}/proveedores`);
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json();
 
-  if (!data.ok) {
-    console.error("No se pudieron cargar proveedores:", data);
-    return;
-  }
+  select1.innerHTML = `<option value="">—</option>`;
 
-  proveedoresCache = data.proveedores || [];
-
-  for (const sel of selects) {
-    const actual = sel.value;
-    sel.innerHTML = `<option value="">—</option>`;
-    proveedoresCache.forEach(p => {
+  if (data.ok && Array.isArray(data.proveedores)) {
+    data.proveedores.forEach(p => {
       const opt = document.createElement("option");
       opt.value = p.id;
       opt.textContent = p.nombre;
-      sel.appendChild(opt);
+      select1.appendChild(opt);
     });
-    if ([...sel.options].some(o => o.value === actual)) sel.value = actual;
   }
 }
 
-async function crearProveedorDesdeInput(inputId) {
+document.getElementById("btn-crear-proveedor")?.addEventListener("click", async () => {
   if (!esAdmin()) return alert("Solo admin puede registrar proveedores.");
 
-  const input = document.getElementById(inputId);
+  const input = document.getElementById("nuevo-proveedor-nombre");
   const nombre = (input?.value || "").trim();
   if (!nombre) return alert("Escribe el nombre del proveedor.");
 
@@ -200,20 +186,16 @@ async function crearProveedorDesdeInput(inputId) {
     method: "POST",
     body: JSON.stringify({ nombre })
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json();
 
   if (!data.ok) return alert(data.message || "No se pudo crear proveedor.");
 
-  if (input) input.value = "";
+  input.value = "";
   await cargarProveedores();
   alert("Proveedor registrado");
-}
-
-document.getElementById("btn-crear-proveedor-lote")?.addEventListener("click", async () => {
-  await crearProveedorDesdeInput("nuevo-proveedor-nombre-lote");
 });
 
-/* ==================== MATERIALES (TABLA + BUSCADOR) ==================== */
+/* ==================== MATERIALES (TABLA + BUSCADOR + CREAR) ==================== */
 
 let materialesCache = [];
 
@@ -229,6 +211,10 @@ function renderMaterialesTabla(lista) {
       <td>${m.nombre}</td>
       <td>${m.stock_actual}</td>
       <td>${m.ubicacion || ""}</td>
+      <td>${m.proveedor_nombre || ""}</td>
+      <td>${m.ticket_numero || ""}</td>
+      <td>${m.requiere_protocolo ? (m.protocolo_texto || "Sí") : "No"}</td>
+      <td>${m.precio_unitario ?? ""}</td>
       <td>${m.creado_por_nombre || m.creado_por_email || "-"}</td>
     `;
     tbody.appendChild(tr);
@@ -240,7 +226,17 @@ function filtrarMateriales(q) {
   if (!q) return materialesCache;
 
   return materialesCache.filter(m => {
-    const texto = [m.codigo, m.nombre, m.ubicacion].join(" ").toLowerCase();
+    const texto = [
+      m.codigo,
+      m.nombre,
+      m.ubicacion,
+      m.proveedor_nombre,
+      m.ticket_numero,
+      m.protocolo_texto,
+      m.creado_por_nombre,
+      m.creado_por_email
+    ].join(" ").toLowerCase();
+
     return texto.includes(q);
   });
 }
@@ -249,9 +245,17 @@ document.getElementById("buscar-materiales")?.addEventListener("input", (e) => {
   renderMaterialesTabla(filtrarMateriales(e.target.value));
 });
 
+function toggleProtocoloForm() {
+  const sel = document.getElementById("select-requiere-protocolo");
+  const grupo = document.getElementById("grupo-protocolo-texto");
+  if (!sel || !grupo) return;
+  grupo.style.display = sel.value === "1" ? "block" : "none";
+}
+document.getElementById("select-requiere-protocolo")?.addEventListener("change", toggleProtocoloForm);
+
 async function cargarMateriales() {
   const res = await apiFetch(`${API_BASE}/materiales`);
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json();
 
   if (!data.ok) {
     alert(data.message || "Error al cargar materiales");
@@ -268,30 +272,39 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
   if (!esAdmin()) return alert("No tienes permisos (solo admin).");
 
   const form = e.target;
+  const requiere = form.requiere_protocolo?.value === "1";
 
   const payload = {
     codigo: form.codigo.value.trim(),
     nombre: form.nombre.value.trim(),
+
     stock_inicial: parseFloat(form.stock_inicial.value || 0),
     stock_minimo: parseFloat(form.stock_minimo.value || 0),
-    ubicacion: form.ubicacion.value.trim() || null
+    ubicacion: form.ubicacion.value.trim() || null,
+
+    // ✅ opcionales
+    proveedor_id: form.proveedor_id.value ? Number(form.proveedor_id.value) : null,
+    ticket_numero: form.ticket_numero.value.trim() || null,
+    requiere_protocolo: requiere ? 1 : 0,
+    protocolo_texto: requiere ? (form.protocolo_texto.value.trim() || null) : null,
+    precio_unitario: form.precio_unitario.value !== "" ? Number(form.precio_unitario.value) : null
   };
 
   const res = await apiFetch(`${API_BASE}/materiales`, {
     method: "POST",
     body: JSON.stringify(payload)
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json();
 
   if (!data.ok) return alert(data.message || "Error al guardar material");
 
   alert("Material guardado");
   form.reset();
+  toggleProtocoloForm();
 
   await cargarMateriales();
-  await cargarMaterialesEnSelectProyecto();
-  await cargarAdminMateriales(true);
 });
+
 
 /* ==================== PROYECTOS ==================== */
 
@@ -780,7 +793,7 @@ async function seleccionarMaterialAdmin(materialId, silencioso = false) {
 
   setAdminPanelVisible(true);
 
-  // llenar form de material base
+  
   const f = document.getElementById("form-editar-material-base");
   if (f) {
     f.nombre.value = mat.nombre || "";
