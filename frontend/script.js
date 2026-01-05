@@ -109,7 +109,7 @@ function mostrarSeccion(id) {
     btn.classList.toggle("activa", btn.dataset.section === id);
   });
 
-  if (id === "admin-almacen") cargarAdminMaterialesV2();
+  if (id === "admin-almacen") cargarAdminMateriales();
   if (id === "movimientos") cargarMovimientosGlobal();
   if (id === "usuarios") cargarUsuarios();
 }
@@ -159,36 +159,40 @@ document.getElementById("btn-export-materiales-pdf")?.addEventListener("click", 
 let proveedoresCache = [];
 
 async function cargarProveedores() {
-  const select1 = document.getElementById("select-proveedor-material");
-  const select2 = document.getElementById("select-proveedor-lote");
-  if (!select1 && !select2) return;
+  const selects = [
+    document.getElementById("select-proveedor-lote"),
+    document.getElementById("select-proveedor-editar-lote"),
+  ].filter(Boolean);
+
+  if (!selects.length) return;
 
   const res = await apiFetch(`${API_BASE}/proveedores`);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
+
+  if (!data.ok) {
+    console.error("No se pudieron cargar proveedores:", data);
+    return;
+  }
 
   proveedoresCache = data.proveedores || [];
 
-  const llenar = (sel) => {
-    if (!sel) return;
+  for (const sel of selects) {
+    const actual = sel.value;
     sel.innerHTML = `<option value="">—</option>`;
-    if (data.ok) {
-      data.proveedores.forEach(p => {
-        const opt = document.createElement("option");
-        opt.value = p.id;
-        opt.textContent = p.nombre;
-        sel.appendChild(opt);
-      });
-    }
-  };
-
-  llenar(select1);
-  llenar(select2);
+    proveedoresCache.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.nombre;
+      sel.appendChild(opt);
+    });
+    if ([...sel.options].some(o => o.value === actual)) sel.value = actual;
+  }
 }
 
-document.getElementById("btn-crear-proveedor")?.addEventListener("click", async () => {
+async function crearProveedorDesdeInput(inputId) {
   if (!esAdmin()) return alert("Solo admin puede registrar proveedores.");
 
-  const input = document.getElementById("nuevo-proveedor-nombre");
+  const input = document.getElementById(inputId);
   const nombre = (input?.value || "").trim();
   if (!nombre) return alert("Escribe el nombre del proveedor.");
 
@@ -196,13 +200,17 @@ document.getElementById("btn-crear-proveedor")?.addEventListener("click", async 
     method: "POST",
     body: JSON.stringify({ nombre })
   });
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   if (!data.ok) return alert(data.message || "No se pudo crear proveedor.");
 
   if (input) input.value = "";
   await cargarProveedores();
   alert("Proveedor registrado");
+}
+
+document.getElementById("btn-crear-proveedor-lote")?.addEventListener("click", async () => {
+  await crearProveedorDesdeInput("nuevo-proveedor-nombre-lote");
 });
 
 /* ==================== MATERIALES (TABLA + BUSCADOR) ==================== */
@@ -221,10 +229,6 @@ function renderMaterialesTabla(lista) {
       <td>${m.nombre}</td>
       <td>${m.stock_actual}</td>
       <td>${m.ubicacion || ""}</td>
-      <td>${m.proveedor_nombre || ""}</td>
-      <td>${m.ticket_numero || ""}</td>
-      <td>${m.requiere_protocolo ? (m.protocolo_texto || "Sí") : "No"}</td>
-      <td>${m.precio_unitario ?? ""}</td>
       <td>${m.creado_por_nombre || m.creado_por_email || "-"}</td>
     `;
     tbody.appendChild(tr);
@@ -236,11 +240,7 @@ function filtrarMateriales(q) {
   if (!q) return materialesCache;
 
   return materialesCache.filter(m => {
-    const texto = [
-      m.codigo, m.nombre, m.ubicacion,
-      m.proveedor_nombre, m.ticket_numero,
-      m.protocolo_texto, m.creado_por_nombre, m.creado_por_email
-    ].join(" ").toLowerCase();
+    const texto = [m.codigo, m.nombre, m.ubicacion].join(" ").toLowerCase();
     return texto.includes(q);
   });
 }
@@ -249,17 +249,9 @@ document.getElementById("buscar-materiales")?.addEventListener("input", (e) => {
   renderMaterialesTabla(filtrarMateriales(e.target.value));
 });
 
-function toggleProtocoloForm() {
-  const sel = document.getElementById("select-requiere-protocolo");
-  const grupo = document.getElementById("grupo-protocolo-texto");
-  if (!sel || !grupo) return;
-  grupo.style.display = sel.value === "1" ? "block" : "none";
-}
-document.getElementById("select-requiere-protocolo")?.addEventListener("change", toggleProtocoloForm);
-
 async function cargarMateriales() {
   const res = await apiFetch(`${API_BASE}/materiales`);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   if (!data.ok) {
     alert(data.message || "Error al cargar materiales");
@@ -276,35 +268,29 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
   if (!esAdmin()) return alert("No tienes permisos (solo admin).");
 
   const form = e.target;
-  const requiere = form.requiere_protocolo?.value === "1";
 
   const payload = {
     codigo: form.codigo.value.trim(),
     nombre: form.nombre.value.trim(),
     stock_inicial: parseFloat(form.stock_inicial.value || 0),
     stock_minimo: parseFloat(form.stock_minimo.value || 0),
-    ubicacion: form.ubicacion.value.trim() || null,
-    proveedor_id: form.proveedor_id.value ? Number(form.proveedor_id.value) : null,
-    ticket_numero: form.ticket_numero.value.trim() || null,
-    requiere_protocolo: requiere ? 1 : 0,
-    protocolo_texto: requiere ? (form.protocolo_texto.value.trim() || null) : null,
-    precio_unitario: form.precio_unitario.value !== "" ? Number(form.precio_unitario.value) : null
+    ubicacion: form.ubicacion.value.trim() || null
   };
 
   const res = await apiFetch(`${API_BASE}/materiales`, {
     method: "POST",
     body: JSON.stringify(payload)
   });
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   if (!data.ok) return alert(data.message || "Error al guardar material");
 
   alert("Material guardado");
   form.reset();
-  toggleProtocoloForm();
 
   await cargarMateriales();
   await cargarMaterialesEnSelectProyecto();
+  await cargarAdminMateriales(true);
 });
 
 /* ==================== PROYECTOS ==================== */
@@ -315,7 +301,7 @@ let etapaSeleccionadaId = "__ALL__";
 
 async function cargarProyectos() {
   const res = await apiFetch(`${API_BASE}/proyectos`);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   const ul = document.getElementById("lista-proyectos");
   if (!ul) return;
@@ -326,7 +312,7 @@ async function cargarProyectos() {
     return;
   }
 
-  data.proyectos.forEach(p => {
+  (data.proyectos || []).forEach(p => {
     const li = document.createElement("li");
     li.style.display = "flex";
     li.style.alignItems = "center";
@@ -402,7 +388,7 @@ document.getElementById("form-proyecto")?.addEventListener("submit", async (e) =
     body: JSON.stringify(payload)
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!data.ok) return alert(data.message || "Error al crear proyecto");
 
   alert("Proyecto creado");
@@ -414,7 +400,7 @@ document.getElementById("form-proyecto")?.addEventListener("submit", async (e) =
 
 async function cargarEtapaActiva(proyectoId) {
   const res = await apiFetch(`${API_BASE}/proyectos/${proyectoId}/etapas/activa`);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   const txt = document.getElementById("etapa-activa-texto");
   if (!data.ok || !data.etapa) {
@@ -429,7 +415,7 @@ async function cargarEtapaActiva(proyectoId) {
 
 async function cargarEtapasProyecto(proyectoId) {
   const res = await apiFetch(`${API_BASE}/proyectos/${proyectoId}/etapas`);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   const select = document.getElementById("select-etapa");
   const resumen = document.getElementById("etapas-resumen");
@@ -442,7 +428,7 @@ async function cargarEtapasProyecto(proyectoId) {
     return;
   }
 
-  data.etapas.forEach(et => {
+  (data.etapas || []).forEach(et => {
     const opt = document.createElement("option");
     opt.value = String(et.id);
     opt.textContent = `${et.nombre} (${et.estado})`;
@@ -452,9 +438,9 @@ async function cargarEtapasProyecto(proyectoId) {
   select.value = String(etapaSeleccionadaId);
 
   if (resumen) {
-    const total = data.etapas.length;
-    const activas = data.etapas.filter(e => e.estado === "ACTIVA").length;
-    const cerradas = data.etapas.filter(e => e.estado === "CERRADA").length;
+    const total = (data.etapas || []).length;
+    const activas = (data.etapas || []).filter(e => e.estado === "ACTIVA").length;
+    const cerradas = (data.etapas || []).filter(e => e.estado === "CERRADA").length;
     resumen.textContent = `Etapas: ${total} · Activas: ${activas} · Cerradas: ${cerradas}`;
   }
 
@@ -476,7 +462,7 @@ document.getElementById("btn-crear-etapa")?.addEventListener("click", async () =
     body: JSON.stringify({ nombre: nombre.trim() })
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!data.ok) return alert(data.message || "No se pudo crear la etapa");
 
   alert("Etapa creada");
@@ -494,7 +480,7 @@ document.getElementById("btn-cerrar-etapa")?.addEventListener("click", async () 
   if (!confirm("¿Cerrar la etapa activa?")) return;
 
   const res = await apiFetch(`${API_BASE}/etapas/${etapaActivaId}/cerrar`, { method: "POST" });
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!data.ok) return alert(data.message || "No se pudo cerrar la etapa");
 
   alert("Etapa cerrada");
@@ -540,7 +526,7 @@ function filtrarMaterialesSelect(q) {
 
 async function cargarMaterialesEnSelectProyecto() {
   const res = await apiFetch(`${API_BASE}/materiales`);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   if (!data.ok) {
     alert(data.message || "Error al cargar materiales para proyectos");
@@ -560,7 +546,7 @@ document.getElementById("buscar-material-proyecto")?.addEventListener("input", (
 
 async function cargarMovimientosDeProyecto(proyectoId) {
   const res = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoId}/movimientos`);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   const tbody = document.querySelector("#tabla-movimientos-proyecto tbody");
   if (!tbody) return;
@@ -568,7 +554,7 @@ async function cargarMovimientosDeProyecto(proyectoId) {
 
   if (!data.ok) return alert(data.message || "Error al cargar movimientos del proyecto");
 
-  data.movimientos.forEach(mv => {
+  (data.movimientos || []).forEach(mv => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${new Date(mv.creado_en).toLocaleString()}</td>
@@ -584,7 +570,7 @@ async function cargarMovimientosDeProyecto(proyectoId) {
 
 async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
   const res = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoId}/etapa/${etapaId}/movimientos`);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   const tbody = document.querySelector("#tabla-movimientos-proyecto tbody");
   if (!tbody) return;
@@ -592,7 +578,7 @@ async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
 
   if (!data.ok) return alert(data.message || "Error al cargar movimientos de la etapa");
 
-  data.movimientos.forEach(mv => {
+  (data.movimientos || []).forEach(mv => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${new Date(mv.creado_en).toLocaleString()}</td>
@@ -642,7 +628,7 @@ document.getElementById("form-salida-proyecto")?.addEventListener("submit", asyn
     body: JSON.stringify(payload)
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!data.ok) return alert(data.message || "Error al registrar salida");
 
   alert("Salida registrada");
@@ -664,10 +650,10 @@ async function calcularTotalesProyectoYEtapa() {
   if (!proyectoSeleccionadoId) return;
 
   const resAll = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoSeleccionadoId}/movimientos`);
-  const dataAll = await resAll.json();
+  const dataAll = await resAll.json().catch(() => ({}));
   if (!dataAll.ok) return;
 
-  const totalProyecto = dataAll.movimientos.reduce((acc, mv) => {
+  const totalProyecto = (dataAll.movimientos || []).reduce((acc, mv) => {
     const total = mv.total ?? (Number(mv.precio_unitario || 0) * Number(mv.cantidad || 0));
     return acc + Number(total || 0);
   }, 0);
@@ -682,10 +668,10 @@ async function calcularTotalesProyectoYEtapa() {
   }
 
   const resEt = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoSeleccionadoId}/etapa/${etapaSeleccionadaId}/movimientos`);
-  const dataEt = await resEt.json();
+  const dataEt = await resEt.json().catch(() => ({}));
   if (!dataEt.ok) return;
 
-  const totalEtapa = dataEt.movimientos.reduce((acc, mv) => {
+  const totalEtapa = (dataEt.movimientos || []).reduce((acc, mv) => {
     const total = mv.total ?? (Number(mv.precio_unitario || 0) * Number(mv.cantidad || 0));
     return acc + Number(total || 0);
   }, 0);
@@ -694,45 +680,35 @@ async function calcularTotalesProyectoYEtapa() {
   if (te) te.textContent = money(totalEtapa);
 }
 
-document.getElementById("btn-export-etapa-excel")?.addEventListener("click", () => {
-  if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero");
-  if (etapaSeleccionadaId === "__ALL__") return alert("Selecciona una etapa específica.");
-
-  descargarArchivo(
-    `${API_BASE}/proyectos/${proyectoSeleccionadoId}/etapas/${etapaSeleccionadaId}/export/excel`,
-    `proyecto_${proyectoSeleccionadoId}_etapa_${etapaSeleccionadaId}.xlsx`
-  );
-});
-
-document.getElementById("btn-export-etapa-pdf")?.addEventListener("click", () => {
-  if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero");
-  if (etapaSeleccionadaId === "__ALL__") return alert("Selecciona una etapa específica.");
-
-  descargarArchivo(
-    `${API_BASE}/proyectos/${proyectoSeleccionadoId}/etapas/${etapaSeleccionadaId}/export/pdf`,
-    `proyecto_${proyectoSeleccionadoId}_etapa_${etapaSeleccionadaId}.pdf`
-  );
-});
-
-/* ==================== ADMIN ALMACÉN V2 (LOTES) ==================== */
+/* ==================== ADMIN ALMACÉN (material + lotes) ==================== */
 
 let adminMaterialSeleccionado = null;
 let adminMaterialesCache = [];
+let adminLotesCache = [];
+let loteEditando = null;
 
-function setAdminLotesVisible(visible) {
-  const panel = document.getElementById("admin-lotes-panel");
-  const vacio = document.getElementById("admin-lotes-vacio");
+function setAdminPanelVisible(visible) {
+  const panel = document.getElementById("admin-panel");
+  const vacio = document.getElementById("admin-panel-vacio");
   if (panel) panel.style.display = visible ? "block" : "none";
   if (vacio) vacio.style.display = visible ? "none" : "block";
 }
 
-function toggleProtocoloLote() {
+function toggleProtocoloCrearLote() {
   const sel = document.getElementById("select-lote-requiere-protocolo");
   const grupo = document.getElementById("grupo-lote-protocolo");
   if (!sel || !grupo) return;
   grupo.style.display = sel.value === "1" ? "block" : "none";
 }
-document.getElementById("select-lote-requiere-protocolo")?.addEventListener("change", toggleProtocoloLote);
+document.getElementById("select-lote-requiere-protocolo")?.addEventListener("change", toggleProtocoloCrearLote);
+
+function toggleProtocoloEditarLote() {
+  const sel = document.getElementById("select-editar-lote-requiere-protocolo");
+  const grupo = document.getElementById("grupo-editar-lote-protocolo");
+  if (!sel || !grupo) return;
+  grupo.style.display = sel.value === "1" ? "block" : "none";
+}
+document.getElementById("select-editar-lote-requiere-protocolo")?.addEventListener("change", toggleProtocoloEditarLote);
 
 document.getElementById("buscar-admin-material")?.addEventListener("input", (e) => {
   const q = (e.target.value || "").toLowerCase().trim();
@@ -755,39 +731,39 @@ function renderAdminMaterialesTabla(lista) {
       <td>${m.stock_actual}</td>
       <td>${m.ubicacion || ""}</td>
       <td>
-        <button class="btn-secondary" type="button" data-id="${m.id}">Ver lotes</button>
-        <button class="btn-secondary" type="button" data-del="${m.id}">🗑 Desactivar</button>
+        <button class="btn-secondary" type="button" data-ver="${m.id}">Ver</button>
       </td>
     `;
     tbody.appendChild(tr);
   });
 
-  tbody.querySelectorAll("button[data-id]").forEach(btn => {
-    btn.onclick = () => seleccionarMaterialAdmin(btn.dataset.id);
-  });
-
-  tbody.querySelectorAll("button[data-del]").forEach(btn => {
-    btn.onclick = () => eliminarMaterial(btn.dataset.del);
+  tbody.querySelectorAll("button[data-ver]").forEach(btn => {
+    btn.onclick = () => seleccionarMaterialAdmin(btn.dataset.ver);
   });
 }
 
-async function cargarAdminMaterialesV2() {
+async function cargarAdminMateriales(silencioso = false) {
   if (!esAdmin()) return;
 
   const res = await apiFetch(`${API_BASE}/materiales`);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
-  if (!data.ok) return alert(data.message || "Error al cargar materiales (admin)");
+  if (!data.ok) {
+    if (!silencioso) alert(data.message || "Error al cargar materiales (admin)");
+    return;
+  }
 
   adminMaterialesCache = data.materiales || [];
   const q = document.getElementById("buscar-admin-material")?.value || "";
-  const filtrados = q ? adminMaterialesCache.filter(m => `${m.codigo} ${m.nombre}`.toLowerCase().includes(q.toLowerCase())) : adminMaterialesCache;
+  const filtrados = q
+    ? adminMaterialesCache.filter(m => `${m.codigo} ${m.nombre}`.toLowerCase().includes(q.toLowerCase()))
+    : adminMaterialesCache;
 
   renderAdminMaterialesTabla(filtrados);
 
-  // si ya había uno seleccionado, refresca
   if (adminMaterialSeleccionado) {
-    await seleccionarMaterialAdmin(adminMaterialSeleccionado.id, true);
+    const existe = adminMaterialesCache.find(x => String(x.id) === String(adminMaterialSeleccionado.id));
+    if (existe) await seleccionarMaterialAdmin(existe.id, true);
   }
 }
 
@@ -796,26 +772,40 @@ async function seleccionarMaterialAdmin(materialId, silencioso = false) {
   if (!mat) return;
 
   adminMaterialSeleccionado = mat;
+  loteEditando = null;
+  document.getElementById("panel-editar-lote").style.display = "none";
 
   const lbl = document.getElementById("admin-material-seleccionado");
   if (lbl) lbl.textContent = `${mat.codigo} - ${mat.nombre}`;
 
-  setAdminLotesVisible(true);
+  setAdminPanelVisible(true);
 
-  // llenar proveedores en select de lotes
+  // llenar form de material base
+  const f = document.getElementById("form-editar-material-base");
+  if (f) {
+    f.nombre.value = mat.nombre || "";
+    f.stock_minimo.value = mat.stock_minimo ?? 0;
+    f.ubicacion.value = mat.ubicacion || "";
+  }
+
+  document.getElementById("btn-desactivar-material")?.addEventListener("click", async () => {
+    await desactivarMaterialSeleccionado();
+  });
+
   await cargarProveedores();
-  // cargar lotes
   await cargarLotesMaterial(mat.id, silencioso);
 }
 
 async function cargarLotesMaterial(materialId, silencioso = false) {
   const res = await apiFetch(`${API_BASE}/materiales/${materialId}/lotes`);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   if (!data.ok) {
     if (!silencioso) alert(data.message || "No se pudieron cargar lotes");
     return;
   }
+
+  adminLotesCache = data.lotes || [];
 
   const tbody = document.querySelector("#tabla-admin-lotes tbody");
   if (tbody) tbody.innerHTML = "";
@@ -823,41 +813,77 @@ async function cargarLotesMaterial(materialId, silencioso = false) {
   const selectAjuste = document.getElementById("select-ajuste-lote");
   if (selectAjuste) selectAjuste.innerHTML = "";
 
-  (data.lotes || []).forEach(l => {
-    // tabla
+  adminLotesCache.forEach(l => {
+    const nombreLote = l.nombre_lote || l.lote_codigo || `Lote ${l.id}`;
+    const prov = l.proveedor_nombre || "";
+    const precioTxt = (l.precio_unitario != null && l.precio_unitario !== "") ? Number(l.precio_unitario).toFixed(2) : "";
+
     if (tbody) {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${l.id}</td>
-        <td>${l.proveedor_nombre || ""}</td>
-        <td>${l.precio_unitario ?? ""}</td>
+        <td>${nombreLote}</td>
+        <td>${prov}</td>
+        <td>${precioTxt}</td>
         <td>${l.ticket_numero || ""}</td>
         <td>${l.requiere_protocolo ? (l.protocolo_texto || "Sí") : "No"}</td>
         <td>${l.cantidad_inicial ?? ""}</td>
         <td>${l.cantidad_disponible ?? ""}</td>
-        <td>${l.creado_en ? new Date(l.creado_en).toLocaleString() : ""}</td>
-        <td>
+        <td style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn-secondary" type="button" data-edit-lote="${l.id}">✏️ Editar</button>
           <button class="btn-secondary" type="button" data-del-lote="${l.id}">🗑 Desactivar</button>
         </td>
       `;
       tbody.appendChild(tr);
     }
 
-    // select ajuste
     if (selectAjuste) {
       const opt = document.createElement("option");
       opt.value = l.id;
-      const prov = l.proveedor_nombre ? ` · ${l.proveedor_nombre}` : "";
-      const precio = l.precio_unitario != null ? ` · $${Number(l.precio_unitario).toFixed(2)}` : "";
+      opt.textContent = `${nombreLote}${prov ? " · " + prov : ""}${precioTxt ? " · $" + precioTxt : ""} · disp:${l.cantidad_disponible}`;
       selectAjuste.appendChild(opt);
-      opt.textContent = `Lote ${l.id}${prov}${precio} · disp:${l.cantidad_disponible}`;
     }
   });
 
   tbody?.querySelectorAll("button[data-del-lote]")?.forEach(btn => {
     btn.onclick = () => eliminarLote(btn.dataset.delLote);
   });
+
+  tbody?.querySelectorAll("button[data-edit-lote]")?.forEach(btn => {
+    btn.onclick = () => abrirEditorLote(btn.dataset.editLote);
+  });
 }
+
+/* ====== Editar material base ====== */
+
+document.getElementById("form-editar-material-base")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!esAdmin()) return alert("Solo admin.");
+  if (!adminMaterialSeleccionado) return alert("Selecciona un material.");
+
+  const form = e.target;
+
+  const payload = {
+    nombre: form.nombre.value.trim(),
+    stock_minimo: Number(form.stock_minimo.value || 0),
+    ubicacion: form.ubicacion.value.trim() || null
+  };
+
+  const res = await apiFetch(`${API_BASE}/materiales/${adminMaterialSeleccionado.id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!data.ok) return alert(data.message || "No se pudo actualizar el material");
+
+  alert("Material actualizado");
+  await cargarMateriales();
+  await cargarMaterialesEnSelectProyecto();
+  await cargarAdminMateriales(true);
+});
+
+/* ====== Crear lote ====== */
 
 document.getElementById("form-crear-lote")?.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -867,8 +893,14 @@ document.getElementById("form-crear-lote")?.addEventListener("submit", async (e)
   const form = e.target;
 
   const requiere = form.requiere_protocolo.value === "1";
+  const nombreLote = (form.nombre_lote.value || "").trim();
+  if (!nombreLote) return alert("Nombre de lote es requerido.");
 
   const payload = {
+    
+    nombre_lote: nombreLote,
+    lote_codigo: nombreLote,
+
     proveedor_id: form.proveedor_id.value ? Number(form.proveedor_id.value) : null,
     precio_unitario: form.precio_unitario.value !== "" ? Number(form.precio_unitario.value) : null,
     ticket_numero: form.ticket_numero.value.trim() || null,
@@ -882,17 +914,20 @@ document.getElementById("form-crear-lote")?.addEventListener("submit", async (e)
     body: JSON.stringify(payload)
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!data.ok) return alert(data.message || "No se pudo crear el lote");
 
   alert("Lote creado y stock actualizado");
   form.reset();
-  toggleProtocoloLote();
+  toggleProtocoloCrearLote();
 
-  await cargarMateriales();             // refresca stock general
-  await cargarAdminMaterialesV2();      // refresca lista admin
+  await cargarMateriales();
+  await cargarMaterialesEnSelectProyecto();
+  await cargarAdminMateriales(true);
   await cargarLotesMaterial(adminMaterialSeleccionado.id, true);
 });
+
+/* ====== Ajustar lote (delta) ====== */
 
 document.getElementById("form-ajustar-lote")?.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -903,65 +938,144 @@ document.getElementById("form-ajustar-lote")?.addEventListener("submit", async (
   const loteId = form.lote_id.value;
   if (!loteId) return alert("Selecciona un lote.");
 
+  const qty = Number(form.cantidad.value);
+  if (!Number.isFinite(qty) || qty <= 0) return alert("Cantidad debe ser mayor a 0.");
+
+  const delta = (form.tipo.value === "entrada") ? qty : -qty;
+
   const payload = {
-    tipo: form.tipo.value, // entrada/salida
-    cantidad: Number(form.cantidad.value),
+    delta,
     comentario: form.comentario.value.trim() || null
   };
 
-  const res = await apiFetch(`${API_BASE}/lotes/${loteId}/ajuste`, {
+  // ✅ tu ruta backend es /ajustar (no /ajuste)
+  const res = await apiFetch(`${API_BASE}/lotes/${loteId}/ajustar`, {
     method: "POST",
     body: JSON.stringify(payload)
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!data.ok) return alert(data.message || "No se pudo ajustar el lote");
 
   alert("Ajuste aplicado");
   form.reset();
 
   await cargarMateriales();
-  await cargarAdminMaterialesV2();
+  await cargarMaterialesEnSelectProyecto();
+  await cargarAdminMateriales(true);
   await cargarLotesMaterial(adminMaterialSeleccionado.id, true);
 });
+
+/* ====== Editar lote ====== */
+
+function abrirEditorLote(loteId) {
+  const l = adminLotesCache.find(x => String(x.id) === String(loteId));
+  if (!l) return;
+
+  loteEditando = l;
+
+  const panel = document.getElementById("panel-editar-lote");
+  panel.style.display = "block";
+
+  const form = document.getElementById("form-editar-lote");
+  const nombreLote = l.nombre_lote || l.lote_codigo || "";
+
+  form.nombre_lote.value = nombreLote;
+  form.proveedor_id.value = l.proveedor_id || "";
+  form.precio_unitario.value = (l.precio_unitario ?? "");
+  form.ticket_numero.value = l.ticket_numero || "";
+  form.requiere_protocolo.value = l.requiere_protocolo ? "1" : "0";
+  form.protocolo_texto.value = l.protocolo_texto || "";
+
+  toggleProtocoloEditarLote();
+}
+
+document.getElementById("btn-cancelar-editar-lote")?.addEventListener("click", () => {
+  loteEditando = null;
+  document.getElementById("panel-editar-lote").style.display = "none";
+});
+
+document.getElementById("form-editar-lote")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!esAdmin()) return alert("Solo admin.");
+  if (!loteEditando) return alert("No hay lote seleccionado para editar.");
+
+  const form = e.target;
+  const nombreLote = (form.nombre_lote.value || "").trim();
+  if (!nombreLote) return alert("Nombre de lote es requerido.");
+
+  const requiere = form.requiere_protocolo.value === "1";
+
+  const payload = {
+    // compatibilidad
+    nombre_lote: nombreLote,
+    lote_codigo: nombreLote,
+
+    proveedor_id: form.proveedor_id.value ? Number(form.proveedor_id.value) : null,
+    precio_unitario: form.precio_unitario.value !== "" ? Number(form.precio_unitario.value) : null,
+    ticket_numero: form.ticket_numero.value.trim() || null,
+    requiere_protocolo: requiere ? 1 : 0,
+    protocolo_texto: requiere ? (form.protocolo_texto.value.trim() || null) : null
+  };
+
+  const res = await apiFetch(`${API_BASE}/lotes/${loteEditando.id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!data.ok) return alert(data.message || "No se pudo actualizar el lote");
+
+  alert("Lote actualizado");
+  loteEditando = null;
+  document.getElementById("panel-editar-lote").style.display = "none";
+
+  await cargarAdminMateriales(true);
+  if (adminMaterialSeleccionado) await cargarLotesMaterial(adminMaterialSeleccionado.id, true);
+});
+
+/* ====== Eliminar lote/material ====== */
 
 async function eliminarLote(loteId) {
   if (!esAdmin()) return alert("Solo admin.");
   if (!confirm("¿Desactivar este lote? (No se borra historial)")) return;
 
   const res = await apiFetch(`${API_BASE}/lotes/${loteId}`, { method: "DELETE" });
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   if (!data.ok) return alert(data.message || "No se pudo desactivar el lote");
 
   alert("Lote desactivado");
   await cargarMateriales();
-  await cargarAdminMaterialesV2();
+  await cargarMaterialesEnSelectProyecto();
+  await cargarAdminMateriales(true);
   if (adminMaterialSeleccionado) await cargarLotesMaterial(adminMaterialSeleccionado.id, true);
 }
 
-async function eliminarMaterial(id) {
+async function desactivarMaterialSeleccionado() {
   if (!esAdmin()) return alert("Solo admin.");
+  if (!adminMaterialSeleccionado) return alert("Selecciona un material.");
   if (!confirm("¿Desactivar este material?")) return;
 
-  const res = await apiFetch(`${API_BASE}/materiales/${id}`, { method: "DELETE" });
-  const data = await res.json();
+  const res = await apiFetch(`${API_BASE}/materiales/${adminMaterialSeleccionado.id}`, { method: "DELETE" });
+  const data = await res.json().catch(() => ({}));
 
   if (!data.ok) return alert(data.message || "Error al desactivar material");
 
   alert("Material desactivado");
   adminMaterialSeleccionado = null;
-  setAdminLotesVisible(false);
+  setAdminPanelVisible(false);
 
   await cargarMateriales();
-  await cargarAdminMaterialesV2();
+  await cargarMaterialesEnSelectProyecto();
+  await cargarAdminMateriales(true);
 }
 
 /* ==================== MOVIMIENTOS GLOBALES ==================== */
 
 async function cargarMovimientosGlobal() {
   const res = await apiFetch(`${API_BASE}/movimientos`);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   const tbody = document.querySelector("#tabla-movimientos-global tbody");
   if (!tbody) return;
@@ -969,7 +1083,7 @@ async function cargarMovimientosGlobal() {
 
   if (!data.ok) return alert(data.message || "Error al cargar movimientos globales");
 
-  data.movimientos.forEach(mv => {
+  (data.movimientos || []).forEach(mv => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${new Date(mv.creado_en).toLocaleString()}</td>
@@ -991,7 +1105,7 @@ async function cargarUsuarios() {
   if (!esAdmin()) return alert("No tienes permisos.");
 
   const res = await apiFetch(`${API_BASE}/users`);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   const tbody = document.querySelector("#tabla-usuarios tbody");
   if (!tbody) return;
@@ -999,7 +1113,7 @@ async function cargarUsuarios() {
 
   if (!data.ok) return alert(data.message || "No se pudo cargar usuarios");
 
-  data.usuarios.forEach(u => {
+  (data.usuarios || []).forEach(u => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${u.nombre}</td>
@@ -1033,7 +1147,7 @@ document.getElementById("form-usuario")?.addEventListener("submit", async (e) =>
     body: JSON.stringify(payload)
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!data.ok) return alert(data.message || "Error al crear usuario");
 
   alert("Usuario creado");
@@ -1049,13 +1163,12 @@ document.getElementById("form-usuario")?.addEventListener("submit", async (e) =>
   aplicarUIporRol();
   document.getElementById("btn-logout")?.addEventListener("click", logout);
 
-  cargarProveedores();
   cargarMateriales();
   cargarProyectos();
   cargarMaterialesEnSelectProyecto();
+  cargarProveedores();
 
-  // panel admin lotes invisible hasta seleccionar material
-  setAdminLotesVisible(false);
+  setAdminPanelVisible(false);
 
   if (!esAdmin()) {
     const secAdmin = document.getElementById("admin-almacen");

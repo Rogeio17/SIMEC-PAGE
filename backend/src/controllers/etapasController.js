@@ -1,8 +1,6 @@
 import pool from "../config/db.js";
 
-/**
- * Lista etapas de un proyecto
- */
+
 export async function listarEtapasProyecto(req, res) {
   try {
     const proyectoId = Number(req.params.id);
@@ -20,10 +18,7 @@ export async function listarEtapasProyecto(req, res) {
   }
 }
 
-/**
- * Crea una nueva etapa.
- * Por defecto cierra cualquier etapa ACTIVA anterior para dejar solo 1 ACTIVA.
- */
+
 export async function crearEtapaProyecto(req, res) {
   try {
     const proyectoId = Number(req.params.id);
@@ -33,7 +28,7 @@ export async function crearEtapaProyecto(req, res) {
       return res.status(400).json({ ok: false, message: "Nombre de etapa requerido" });
     }
 
-    // Validar proyecto existe y esté ACTIVO
+ 
     const [proj] = await pool.query(
       "SELECT id, estado FROM proyectos WHERE id = ? LIMIT 1",
       [proyectoId]
@@ -65,9 +60,7 @@ export async function crearEtapaProyecto(req, res) {
   }
 }
 
-/**
- * Cierra una etapa
- */
+
 export async function cerrarEtapa(req, res) {
   try {
     const etapaId = Number(req.params.etapaId);
@@ -93,9 +86,7 @@ export async function cerrarEtapa(req, res) {
   }
 }
 
-/**
- * Devuelve etapa ACTIVA del proyecto (para usarla al registrar salidas)
- */
+
 export async function obtenerEtapaActiva(req, res) {
   try {
     const proyectoId = Number(req.params.id);

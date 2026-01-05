@@ -11,7 +11,7 @@ function logout() {
   location.href = "/login.html";
 }
 
-// 🔒 Si no hay token y no estás en login -> manda a login
+
 (function protect() {
   const token = getToken();
   const isLogin = location.pathname.endsWith("/login.html") || location.pathname.endsWith("login.html");
@@ -19,7 +19,7 @@ function logout() {
   if (!token && !isLogin) location.href = "/login.html";
 })();
 
-// 🔐 Login
+
 async function login() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;

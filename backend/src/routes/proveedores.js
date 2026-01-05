@@ -6,10 +6,10 @@ const router = Router();
 
 router.use(requireAuth);
 
-// cualquiera logueado puede listar proveedores
+
 router.get("/", listarProveedores);
 
-// solo admin puede crear
+
 router.post("/", requireRole("admin"), crearProveedor);
 
 export default router;

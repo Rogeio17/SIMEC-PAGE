@@ -22,7 +22,7 @@ export async function crearProyecto(req, res) {
       return res.status(400).json({ ok: false, message: "Clave y nombre son requeridos" });
     }
 
-    // Evitar duplicado por clave
+ 
     const [existe] = await pool.query(
       "SELECT id FROM proyectos WHERE clave = ? LIMIT 1",
       [clave]
@@ -48,7 +48,7 @@ export async function eliminarProyecto(req, res) {
   try {
     const id = Number(req.params.id);
 
-    // Tu ruta actual era PUT /eliminar/:id; aquí lo dejo como "finalizar" suave.
+    
     await pool.query(
       `UPDATE proyectos
        SET estado = 'FINALIZADO',
@@ -91,9 +91,7 @@ export async function obtenerMaterialesDeProyecto(req, res) {
   }
 }
 
-/**
- * Endpoint extra para finalizar explícitamente
- */
+
 export async function finalizarProyecto(req, res) {
   try {
     const id = Number(req.params.id);

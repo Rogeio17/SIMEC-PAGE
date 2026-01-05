@@ -24,7 +24,7 @@ router.post("/proyecto/:id/salida", requireRole("admin"), registrarSalida);
 router.get("/proyecto/:id/movimientos", listarMovimientosPorProyecto);
 router.get("/proyecto/:id/etapa/:etapaId/movimientos", listarMovimientosPorProyectoYEtapa);
 
-// compatibilidad (si no lo usas, igual no falla)
+
 router.post("/ajustar/:movimiento_id", ajustarMovimiento);
 
 export default router;

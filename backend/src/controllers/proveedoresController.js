@@ -23,7 +23,7 @@ export async function crearProveedor(req, res) {
       return res.status(400).json({ ok: false, message: "Nombre es requerido" });
     }
 
-    // Evitar duplicados por nombre (opcional)
+  
     const [existe] = await pool.query(
       "SELECT id FROM proveedores WHERE nombre = ? LIMIT 1",
       [nombre.trim()]

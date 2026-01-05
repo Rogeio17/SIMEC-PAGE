@@ -1,9 +1,6 @@
 import pool from "../db.js";
 
-/**
- * POST /api/lotes/:loteId/ajustar
- * body: { tipo: "sumar" | "restar", cantidad: number, comentario?: string }
- */
+
 export async function ajustarLote(req, res) {
   const { loteId } = req.params;
   const { tipo, cantidad, comentario } = req.body;
@@ -25,7 +22,7 @@ export async function ajustarLote(req, res) {
   try {
     await conn.beginTransaction();
 
-    // 1) Obtener lote
+   
     const [lotes] = await conn.query(
       `SELECT id, material_id, cantidad_disponible
        FROM material_lotes
@@ -42,7 +39,7 @@ export async function ajustarLote(req, res) {
     const lote = lotes[0];
     const delta = tipo === "sumar" ? qty : -qty;
 
-    // 2) Validar que no quede negativo
+   
     const nuevaDisp = Number(lote.cantidad_disponible) + delta;
     if (nuevaDisp < 0) {
       await conn.rollback();
@@ -52,7 +49,7 @@ export async function ajustarLote(req, res) {
       });
     }
 
-    // 3) Actualizar lote
+   
     await conn.query(
       `UPDATE material_lotes
        SET cantidad_disponible = ?
@@ -60,7 +57,7 @@ export async function ajustarLote(req, res) {
       [nuevaDisp, loteId]
     );
 
-    // 4) Actualizar stock total del material
+    
     await conn.query(
       `UPDATE materiales
        SET stock_actual = stock_actual + ?
@@ -68,8 +65,7 @@ export async function ajustarLote(req, res) {
       [delta, lote.material_id]
     );
 
-    // 5) Registrar movimiento (ajuste)
-    // Ajusta nombres de columnas si tu tabla movimientos es distinta.
+
     await conn.query(
       `INSERT INTO movimientos
         (material_id, lote_id, tipo, cantidad, comentario, creado_por_usuario_id, creado_en)

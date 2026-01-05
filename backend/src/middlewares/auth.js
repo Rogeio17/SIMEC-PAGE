@@ -7,7 +7,7 @@ export function requireAuth(req, res, next) {
     if (!token) return res.status(401).json({ ok: false, message: "No autenticado" });
 
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = payload; // { id, email, rol }
+    req.user = payload; 
     next();
   } catch {
     return res.status(401).json({ ok: false, message: "Token inválido" });

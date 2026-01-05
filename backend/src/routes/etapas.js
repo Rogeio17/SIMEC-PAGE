@@ -7,7 +7,7 @@ const router = express.Router();
 router.use(requireAuth);
 
 /* ==================== LISTAR ETAPAS ==================== */
-/* Nota: tu tabla no tiene creado_en/cerrado_en, así que no los pedimos */
+
 router.get("/proyectos/:id/etapas", async (req, res) => {
   try {
     const proyectoId = Number(req.params.id);
@@ -56,7 +56,7 @@ router.post("/proyectos/:id/etapas", requireRole("admin"), async (req, res) => {
 
     if (!nombre) return res.status(400).json({ ok: false, message: "Nombre requerido" });
 
-    // Cierra cualquier etapa activa previa (sin usar cerrado_en)
+
     await pool.query(
       `UPDATE proyecto_etapas
        SET estado = 'CERRADA'
@@ -64,7 +64,7 @@ router.post("/proyectos/:id/etapas", requireRole("admin"), async (req, res) => {
       [proyectoId]
     );
 
-    // Crea nueva etapa activa
+   
     await pool.query(
       `INSERT INTO proyecto_etapas (proyecto_id, nombre, estado)
        VALUES (?, ?, 'ACTIVA')`,

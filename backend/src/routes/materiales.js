@@ -13,20 +13,29 @@ import {
   exportMaterialesPdf
 } from "../controllers/exportMaterialesController.js";
 
+import {
+  listarLotesDeMaterial,
+  crearLoteParaMaterial
+} from "../controllers/materialLotesController.js";
+
 const router = express.Router();
 
 router.use(requireAuth);
 
-// ✅ EXPORT (primero para que se vea claro)
+
 router.get("/export/excel", requireRole("admin"), exportMaterialesExcel);
 router.get("/export/pdf", requireRole("admin"), exportMaterialesPdf);
 
-// LISTAR
+
 router.get("/", listarMateriales);
 
-// CRUD admin
+
 router.post("/", requireRole("admin"), crearMaterial);
 router.put("/:id", requireRole("admin"), actualizarMaterial);
 router.delete("/:id", requireRole("admin"), eliminarMaterial);
+
+
+router.get("/:materialId/lotes", requireRole("admin"), listarLotesDeMaterial);
+router.post("/:materialId/lotes", requireRole("admin"), crearLoteParaMaterial);
 
 export default router;

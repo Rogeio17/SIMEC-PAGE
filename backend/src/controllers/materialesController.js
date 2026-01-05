@@ -6,9 +6,6 @@ export async function listarMateriales(_req, res) {
       `SELECT
          m.id, m.codigo, m.nombre, m.stock_actual, m.stock_minimo, m.ubicacion,
          m.activo, m.creado_en,
-         m.proveedor_id, p.nombre AS proveedor_nombre,
-         m.ticket_numero, m.requiere_protocolo, m.protocolo_texto,
-         m.precio_unitario,
          m.creado_por_usuario_id,
          u1.nombre AS creado_por_nombre,
          u1.email  AS creado_por_email,
@@ -16,7 +13,6 @@ export async function listarMateriales(_req, res) {
          u2.nombre AS actualizado_por_nombre,
          u2.email  AS actualizado_por_email
        FROM materiales m
-       LEFT JOIN proveedores p ON p.id = m.proveedor_id
        LEFT JOIN usuarios u1 ON u1.id = m.creado_por_usuario_id
        LEFT JOIN usuarios u2 ON u2.id = m.actualizado_por_usuario_id
        WHERE m.activo = 1
@@ -31,66 +27,108 @@ export async function listarMateriales(_req, res) {
 }
 
 export async function crearMaterial(req, res) {
+  const conn = await pool.getConnection();
   try {
+    await conn.beginTransaction();
+
     const {
       codigo,
       nombre,
       stock_inicial = 0,
       stock_minimo = 0,
       ubicacion = null,
+
+      // opcionales (si quieres guardarlos en lote inicial)
       proveedor_id = null,
       ticket_numero = null,
       requiere_protocolo = 0,
       protocolo_texto = null,
       precio_unitario = null,
+
+      // NUEVO: nombre de lote desde el frontend
+      lote_codigo = null,
+      nombre_lote = null
     } = req.body;
 
     if (!codigo || !nombre) {
+      await conn.rollback();
       return res.status(400).json({ ok: false, message: "Código y nombre son requeridos" });
     }
 
-    const reqProto = Number(requiere_protocolo) === 1 ? 1 : 0;
-    const protoText = reqProto ? (protocolo_texto || null) : null;
-
-    const [existe] = await pool.query(
+    const [existe] = await conn.query(
       "SELECT id FROM materiales WHERE codigo = ? LIMIT 1",
       [codigo]
     );
     if (existe.length) {
+      await conn.rollback();
       return res.status(409).json({ ok: false, message: "Ese código ya existe" });
     }
 
-    await pool.query(
+    const stockInicialNum = Number(stock_inicial) || 0;
+
+    const reqProto = Number(requiere_protocolo) === 1 ? 1 : 0;
+    const protoText = reqProto ? (protocolo_texto || null) : null;
+
+    // 1) Crear material
+    const [ins] = await conn.query(
       `INSERT INTO materiales
         (codigo, nombre, stock_actual, stock_minimo, ubicacion, activo, creado_en,
-         proveedor_id, ticket_numero, requiere_protocolo, protocolo_texto, precio_unitario,
          creado_por_usuario_id, actualizado_por_usuario_id)
-       VALUES (?, ?, ?, ?, ?, 1, NOW(),
-               ?, ?, ?, ?, ?,
-               ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, 1, NOW(), ?, ?)`,
       [
-        codigo,
-        nombre,
-        Number(stock_inicial) || 0,
+        String(codigo).trim(),
+        String(nombre).trim(),
+        stockInicialNum,
         Number(stock_minimo) || 0,
-        ubicacion,
-        proveedor_id ? Number(proveedor_id) : null,
-        ticket_numero || null,
-        reqProto,
-        protoText,
-        precio_unitario !== "" && precio_unitario !== null ? Number(precio_unitario) : null,
+        ubicacion || null,
         req.user?.id ?? null,
-        req.user?.id ?? null,
+        req.user?.id ?? null
       ]
     );
 
-    res.json({ ok: true, message: "Material creado" });
+    const materialId = ins.insertId;
+
+    // 2) ✅ SIEMPRE crear lote inicial (aunque stockInicialNum sea 0)
+    const loteInicial =
+      (String(lote_codigo || nombre_lote || "").trim()) ||
+      `INICIAL-${String(codigo).trim()}`;
+
+    await conn.query(
+      `INSERT INTO material_lotes
+        (material_id, lote_codigo, proveedor_id, precio_unitario, ticket_numero,
+         requiere_protocolo, protocolo_texto,
+         cantidad_inicial, cantidad_disponible,
+         activo, creado_en, creado_por_usuario_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), ?)`,
+      [
+        materialId,
+        loteInicial,
+        proveedor_id ? Number(proveedor_id) : null,
+        (precio_unitario !== "" && precio_unitario !== null) ? Number(precio_unitario) : null,
+        ticket_numero || null,
+        reqProto,
+        protoText,
+        stockInicialNum,
+        stockInicialNum,
+        req.user?.id ?? null
+      ]
+    );
+
+    await conn.commit();
+    res.json({ ok: true, message: "Material creado (con lote inicial)" });
   } catch (err) {
+    await conn.rollback();
     console.error("❌ crearMaterial:", err);
     res.status(500).json({ ok: false, message: "Error al crear material" });
+  } finally {
+    conn.release();
   }
 }
 
+/**
+ * Actualiza SOLO datos base del material (no proveedor/precio/ticket/protocolo).
+ * Eso se maneja por LOTES.
+ */
 export async function actualizarMaterial(req, res) {
   try {
     const id = Number(req.params.id);
@@ -99,37 +137,23 @@ export async function actualizarMaterial(req, res) {
       nombre,
       stock_minimo = 0,
       ubicacion = null,
-      proveedor_id = null,
-      ticket_numero = null,
-      requiere_protocolo = 0,
-      protocolo_texto = null,
-      precio_unitario = null,
     } = req.body;
 
-    const reqProto = Number(requiere_protocolo) === 1 ? 1 : 0;
-    const protoText = reqProto ? (protocolo_texto || null) : null;
+    if (!nombre || !String(nombre).trim()) {
+      return res.status(400).json({ ok: false, message: "Nombre es requerido" });
+    }
 
     await pool.query(
       `UPDATE materiales
        SET nombre = ?,
            stock_minimo = ?,
            ubicacion = ?,
-           proveedor_id = ?,
-           ticket_numero = ?,
-           requiere_protocolo = ?,
-           protocolo_texto = ?,
-           precio_unitario = ?,
            actualizado_por_usuario_id = ?
        WHERE id = ?`,
       [
-        nombre,
+        String(nombre).trim(),
         Number(stock_minimo) || 0,
-        ubicacion,
-        proveedor_id ? Number(proveedor_id) : null,
-        ticket_numero || null,
-        reqProto,
-        protoText,
-        precio_unitario !== "" && precio_unitario !== null ? Number(precio_unitario) : null,
+        ubicacion || null,
         req.user?.id ?? null,
         id,
       ]

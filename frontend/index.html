@@ -102,7 +102,7 @@
             <div class="card-body">
               <div class="form-group" style="margin-bottom:12px;">
                 <label>Buscar material</label>
-                <input type="text" id="buscar-materiales" placeholder="Código, nombre, proveedor, ticket..." />
+                <input type="text" id="buscar-materiales" placeholder="Código, nombre..." />
               </div>
 
               <div class="table-wrapper">
@@ -113,10 +113,6 @@
                       <th>Nombre</th>
                       <th>Stock</th>
                       <th>Ubicación</th>
-                      <th>Proveedor</th>
-                      <th>Ticket</th>
-                      <th>Protocolo</th>
-                      <th>Precio</th>
                       <th>Creado por</th>
                     </tr>
                   </thead>
@@ -130,7 +126,7 @@
           <div class="card">
             <div class="card-header">
               <h4>Registrar nuevo material (solo admin)</h4>
-              <p class="small">Incluye proveedor, ticket, protocolo opcional y precio por pieza.</p>
+              <p class="small">Crea el material. Si pones stock inicial, tu backend debería crear lote inicial.</p>
             </div>
 
             <div class="card-body">
@@ -159,43 +155,6 @@
                 <div class="form-group">
                   <label>Ubicación</label>
                   <input type="text" name="ubicacion" />
-                </div>
-
-                <hr class="divider">
-
-                <div class="form-group">
-                  <label>Proveedor</label>
-                  <select id="select-proveedor-material" name="proveedor_id">
-                    <option value="">—</option>
-                  </select>
-                  <small class="small">Si no existe, registra uno nuevo:</small>
-                  <div style="display:flex; gap:8px; margin-top:6px;">
-                    <input type="text" id="nuevo-proveedor-nombre" placeholder="Nombre proveedor" />
-                    <button class="btn-secondary" type="button" id="btn-crear-proveedor">Agregar</button>
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label>Número de ticket (opcional)</label>
-                  <input type="text" name="ticket_numero" />
-                </div>
-
-                <div class="form-group">
-                  <label>¿Requiere protocolo?</label>
-                  <select name="requiere_protocolo" id="select-requiere-protocolo">
-                    <option value="0">No</option>
-                    <option value="1">Sí</option>
-                  </select>
-                </div>
-
-                <div class="form-group" id="grupo-protocolo-texto" style="display:none;">
-                  <label>Protocolo (texto)</label>
-                  <input type="text" name="protocolo_texto" placeholder="Ej: PROT-123 / Instrucciones..." />
-                </div>
-
-                <div class="form-group">
-                  <label>Precio unitario (opcional)</label>
-                  <input type="number" name="precio_unitario" step="0.01" />
                 </div>
 
                 <button class="btn-primary" type="submit" id="btn-guardar-material" disabled>
@@ -321,7 +280,6 @@
 
             <div class="card-body">
               <form id="form-salida-proyecto" class="form form-inline">
-
                 <div class="form-group">
                   <label>Buscar material</label>
                   <input type="text" id="buscar-material-proyecto" placeholder="Escribe código o nombre..." />
@@ -375,12 +333,12 @@
       </section>
 
       <!-- =============================
-           SECCIÓN: ADMIN ALMACÉN (NUEVO - LOTES)
+           SECCIÓN: ADMIN ALMACÉN (LOTES)
            ============================= -->
       <section id="admin-almacen" class="seccion">
         <div class="section-title">
           <h3>Admin de Almacén (solo admin)</h3>
-          <p>Control por lotes (proveedor/precio) + ajustes sin crear lote.</p>
+          <p>Editar material sin lotes + control por lotes (proveedor/precio) + ajustes.</p>
         </div>
 
         <div class="grid-2">
@@ -389,7 +347,7 @@
           <div class="card">
             <div class="card-header">
               <h4>Materiales</h4>
-              <p class="small">Selecciona uno para ver/administrar sus lotes.</p>
+              <p class="small">Selecciona uno para editar material y administrar lotes.</p>
             </div>
 
             <div class="card-body">
@@ -412,29 +370,64 @@
                   <tbody></tbody>
                 </table>
               </div>
+
             </div>
           </div>
 
-          <!-- Panel lotes -->
+          <!-- Panel material + lotes -->
           <div class="card">
             <div class="card-header">
-              <h4>Lotes del material</h4>
+              <h4>Detalle</h4>
               <p class="small">Material seleccionado: <span id="admin-material-seleccionado">Ninguno</span></p>
             </div>
 
-            <div class="card-body" id="admin-lotes-panel" style="display:none;">
+            <div class="card-body" id="admin-panel" style="display:none;">
+
+              <!-- EDITAR MATERIAL (SIN LOTES) -->
+              <h4>Editar material (sin lotes)</h4>
+              <form id="form-editar-material-base" class="form">
+                <div class="form-group">
+                  <label>Nombre *</label>
+                  <input type="text" name="nombre" required />
+                </div>
+
+                <div class="form-group">
+                 <label>Nombre de Lote (opcional)</label>
+                  <input type="text" name="nombre_lote" placeholder="Ej: COMPRA-ENE-2026 / INICIAL..." />
+                  <small class="small">Si lo dejas vacío, se creará automáticamente INICIAL-CÓDIGO.</small>
+                </div>
+
+                <div class="form-group">  
+                  <label>Código *</label>
+                  <input type="text" name="codigo" required />
+                </div>
+
+                <div class="form-group">
+                  <label>Ubicación</label>
+                  <input type="text" name="ubicacion" />
+                </div>
+
+                <button class="btn-primary" type="submit">
+                  <span class="material-icons">save</span> Guardar material
+                </button>
+              </form>
+
+              <hr class="divider">
+
+              <!-- LOTES -->
+              <h4>Lotes</h4>
               <div class="table-wrapper" style="margin-bottom:14px;">
                 <table class="table" id="tabla-admin-lotes">
                   <thead>
                     <tr>
                       <th>ID</th>
+                      <th>Lote</th>
                       <th>Proveedor</th>
                       <th>Precio</th>
                       <th>Ticket</th>
                       <th>Protocolo</th>
                       <th>Inicial</th>
                       <th>Disponible</th>
-                      <th>Creado</th>
                       <th>Acción</th>
                     </tr>
                   </thead>
@@ -442,15 +435,78 @@
                 </table>
               </div>
 
+              <!-- EDITAR LOTE -->
+              <div id="panel-editar-lote" style="display:none;">
+                <hr class="divider">
+                <h4>Editar lote</h4>
+
+                <form id="form-editar-lote" class="form">
+                  <div class="form-group">
+                    <label>Nombre de lote *</label>
+                    <input type="text" name="nombre_lote" required />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Proveedor</label>
+                    <select id="select-proveedor-editar-lote" name="proveedor_id">
+                      <option value="">—</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Precio unitario</label>
+                    <input type="number" step="0.01" name="precio_unitario" />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Ticket</label>
+                    <input type="text" name="ticket_numero" />
+                  </div>
+
+                  <div class="form-group">
+                    <label>¿Requiere protocolo?</label>
+                    <select id="select-editar-lote-requiere-protocolo" name="requiere_protocolo">
+                      <option value="0">No</option>
+                      <option value="1">Sí</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group" id="grupo-editar-lote-protocolo" style="display:none;">
+                    <label>Protocolo</label>
+                    <input type="text" name="protocolo_texto" />
+                  </div>
+
+                  <div style="display:flex; gap:10px; align-items:center;">
+                    <button class="btn-primary" type="submit">
+                      <span class="material-icons">save</span> Guardar lote
+                    </button>
+                    <button class="btn-secondary" type="button" id="btn-cancelar-editar-lote">
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              </div>
+
               <hr class="divider">
 
               <h4>Agregar lote (compra nueva)</h4>
               <form id="form-crear-lote" class="form">
                 <div class="form-group">
+                  <label>Nombre de lote *</label>
+                  <input type="text" name="nombre_lote" placeholder="Ej: COMPRA ENE-2026" required />
+                </div>
+
+                <div class="form-group">
                   <label>Proveedor</label>
                   <select id="select-proveedor-lote" name="proveedor_id">
                     <option value="">—</option>
                   </select>
+
+                  <small class="small">Si no existe, registra uno nuevo:</small>
+                  <div style="display:flex; gap:8px; margin-top:6px;">
+                    <input type="text" id="nuevo-proveedor-nombre-lote" placeholder="Nombre proveedor" />
+                    <button class="btn-secondary" type="button" id="btn-crear-proveedor-lote">Agregar</button>
+                  </div>
                 </div>
 
                 <div class="form-group">
@@ -488,7 +544,7 @@
 
               <hr class="divider">
 
-              <h4>Ajustar lote (corrección sin crear lote)</h4>
+              <h4>Ajustar cantidad de lote (corrección sin crear lote)</h4>
               <form id="form-ajustar-lote" class="form form-inline">
                 <div class="form-group">
                   <label>Lote</label>
@@ -517,10 +573,17 @@
                   <span class="material-icons">tune</span> Aplicar ajuste
                 </button>
               </form>
+
+              <hr class="divider">
+
+              <button class="btn-secondary" type="button" id="btn-desactivar-material">
+                🗑 Desactivar material
+              </button>
+
             </div>
 
-            <div class="card-body" id="admin-lotes-vacio">
-              <p class="hint">Selecciona un material para ver sus lotes.</p>
+            <div class="card-body" id="admin-panel-vacio">
+              <p class="hint">Selecciona un material para ver/editar y administrar lotes.</p>
             </div>
 
           </div>
