@@ -33,7 +33,7 @@ export async function crearProyecto(req, res) {
 
     await pool.query(
       `INSERT INTO proyectos (clave, nombre, cliente, fecha_inicio, descripcion, estado, creado_en, creado_por_usuario_id)
-       VALUES (?, ?, ?, ?, ?, 'ACTIVO', NOW(), ?)`,
+       VALUES (?, ?, ?, ?, ?, 'abierto', NOW(), ?)`,
       [clave, nombre, cliente, fecha_inicio, descripcion, req.user?.id ?? null]
     );
 
