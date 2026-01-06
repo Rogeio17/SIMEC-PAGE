@@ -1,68 +1,98 @@
 import pool from "../config/db.js";
 
+/* ==================== ENTRADA / SALIDA GENERAL (SIN LOTE) ==================== */
+
 export async function registrarEntradaGeneral(req, res) {
+  const conn = await pool.getConnection();
   try {
     const { material_id, cantidad, comentario = null } = req.body;
-
-    if (!material_id || !cantidad) {
-      return res.status(400).json({ ok: false, message: "material_id y cantidad requeridos" });
-    }
 
     const matId = Number(material_id);
     const qty = Number(cantidad);
 
-    await pool.query(
+    if (!Number.isFinite(matId) || matId <= 0 || !Number.isFinite(qty) || qty <= 0) {
+      return res.status(400).json({ ok: false, message: "material_id y cantidad válidos requeridos" });
+    }
+
+    await conn.beginTransaction();
+
+    // validar material existe
+    const [m] = await conn.query(`SELECT id FROM materiales WHERE id = ? LIMIT 1`, [matId]);
+    if (!m.length) {
+      await conn.rollback();
+      return res.status(404).json({ ok: false, message: "Material no encontrado" });
+    }
+
+    await conn.query(
       `INSERT INTO movimientos (material_id, tipo, cantidad, comentario, proyecto_id, etapa_id, usuario_id, creado_en)
        VALUES (?, 'entrada', ?, ?, NULL, NULL, ?, NOW())`,
       [matId, qty, comentario, req.user?.id ?? null]
     );
 
-    await pool.query(
+    await conn.query(
       `UPDATE materiales SET stock_actual = stock_actual + ? WHERE id = ?`,
       [qty, matId]
     );
 
-    res.json({ ok: true, message: "Entrada registrada" });
+    await conn.commit();
+    return res.json({ ok: true, message: "Entrada registrada" });
   } catch (err) {
+    try { await conn.rollback(); } catch {}
     console.error("❌ registrarEntradaGeneral:", err);
-    res.status(500).json({ ok: false, message: "Error al registrar entrada" });
+    return res.status(500).json({ ok: false, message: "Error al registrar entrada" });
+  } finally {
+    conn.release();
   }
 }
 
 export async function registrarSalidaGeneral(req, res) {
+  const conn = await pool.getConnection();
   try {
     const { material_id, cantidad, comentario = null } = req.body;
-
-    if (!material_id || !cantidad) {
-      return res.status(400).json({ ok: false, message: "material_id y cantidad requeridos" });
-    }
 
     const matId = Number(material_id);
     const qty = Number(cantidad);
 
-    const [mat] = await pool.query(`SELECT stock_actual FROM materiales WHERE id = ?`, [matId]);
-    if (!mat.length) return res.status(404).json({ ok: false, message: "Material no encontrado" });
-    if (Number(mat[0].stock_actual) < qty) {
+    if (!Number.isFinite(matId) || matId <= 0 || !Number.isFinite(qty) || qty <= 0) {
+      return res.status(400).json({ ok: false, message: "material_id y cantidad válidos requeridos" });
+    }
+
+    await conn.beginTransaction();
+
+    const [mat] = await conn.query(`SELECT stock_actual FROM materiales WHERE id = ? LIMIT 1`, [matId]);
+    if (!mat.length) {
+      await conn.rollback();
+      return res.status(404).json({ ok: false, message: "Material no encontrado" });
+    }
+
+    if (Number(mat[0].stock_actual || 0) < qty) {
+      await conn.rollback();
       return res.status(400).json({ ok: false, message: "Stock insuficiente" });
     }
 
-    await pool.query(
+    await conn.query(
       `INSERT INTO movimientos (material_id, tipo, cantidad, comentario, proyecto_id, etapa_id, usuario_id, creado_en)
        VALUES (?, 'salida', ?, ?, NULL, NULL, ?, NOW())`,
       [matId, qty, comentario, req.user?.id ?? null]
     );
 
-    await pool.query(
+    await conn.query(
       `UPDATE materiales SET stock_actual = stock_actual - ? WHERE id = ?`,
       [qty, matId]
     );
 
-    res.json({ ok: true, message: "Salida registrada" });
+    await conn.commit();
+    return res.json({ ok: true, message: "Salida registrada" });
   } catch (err) {
+    try { await conn.rollback(); } catch {}
     console.error("❌ registrarSalidaGeneral:", err);
-    res.status(500).json({ ok: false, message: "Error al registrar salida" });
+    return res.status(500).json({ ok: false, message: "Error al registrar salida" });
+  } finally {
+    conn.release();
   }
 }
+
+/* ==================== LISTADOS ==================== */
 
 export async function listarMovimientosGlobal(_req, res) {
   try {
@@ -79,10 +109,10 @@ export async function listarMovimientosGlobal(_req, res) {
        ORDER BY mv.id DESC`
     );
 
-    res.json({ ok: true, movimientos: rows });
+    return res.json({ ok: true, movimientos: rows });
   } catch (err) {
     console.error("❌ listarMovimientosGlobal:", err);
-    res.status(500).json({ ok: false, message: "Error al listar movimientos" });
+    return res.status(500).json({ ok: false, message: "Error al listar movimientos" });
   }
 }
 
@@ -105,10 +135,10 @@ export async function listarMovimientosPorProyecto(req, res) {
       [proyectoId]
     );
 
-    res.json({ ok: true, movimientos: rows });
+    return res.json({ ok: true, movimientos: rows });
   } catch (err) {
     console.error("❌ listarMovimientosPorProyecto:", err);
-    res.status(500).json({ ok: false, message: "Error al listar movimientos del proyecto" });
+    return res.status(500).json({ ok: false, message: "Error al listar movimientos del proyecto" });
   }
 }
 
@@ -132,70 +162,102 @@ export async function listarMovimientosPorProyectoYEtapa(req, res) {
       [proyectoId, etapaId]
     );
 
-    res.json({ ok: true, movimientos: rows });
+    return res.json({ ok: true, movimientos: rows });
   } catch (err) {
     console.error("❌ listarMovimientosPorProyectoYEtapa:", err);
-    res.status(500).json({ ok: false, message: "Error al listar movimientos por etapa" });
+    return res.status(500).json({ ok: false, message: "Error al listar movimientos por etapa" });
   }
 }
 
+/* ==================== SALIDA A PROYECTO (SIN LOTE) ==================== */
+
 export async function registrarSalida(req, res) {
+  const conn = await pool.getConnection();
   try {
     const proyectoId = Number(req.params.id);
     const { material_id, cantidad, comentario = null, etapa_id = null } = req.body;
 
-    if (!material_id || !cantidad) {
-      return res.status(400).json({ ok: false, message: "material_id y cantidad requeridos" });
+    const matId = Number(material_id);
+    const qty = Number(cantidad);
+    const etapaId = Number(etapa_id);
+
+    if (!Number.isFinite(matId) || matId <= 0 || !Number.isFinite(qty) || qty <= 0) {
+      return res.status(400).json({ ok: false, message: "material_id y cantidad válidos requeridos" });
     }
 
-    const [proj] = await pool.query(
+    if (!Number.isFinite(etapaId) || etapaId <= 0) {
+      return res.status(400).json({ ok: false, message: "Debe indicar etapa_id" });
+    }
+
+    await conn.beginTransaction();
+
+    const [proj] = await conn.query(
       "SELECT id, estado FROM proyectos WHERE id = ? LIMIT 1",
       [proyectoId]
     );
-    if (!proj.length) return res.status(404).json({ ok: false, message: "Proyecto no encontrado" });
-    if (proj[0].estado === "FINALIZADO") {
-      return res.status(400).json({ ok: false, message: "El proyecto está finalizado" });
+    if (!proj.length) {
+      await conn.rollback();
+      return res.status(404).json({ ok: false, message: "Proyecto no encontrado" });
     }
 
-    if (!etapa_id) return res.status(400).json({ ok: false, message: "Debe indicar etapa_id" });
+    // ⚠️ Ajusta según tu ENUM real de proyectos: abierto/cerrado/pausado/archivado
+    if (String(proj[0].estado || "").toLowerCase() === "cerrado") {
+      await conn.rollback();
+      return res.status(400).json({ ok: false, message: "El proyecto está cerrado" });
+    }
+    if (String(proj[0].estado || "").toLowerCase() === "archivado") {
+      await conn.rollback();
+      return res.status(400).json({ ok: false, message: "El proyecto está archivado" });
+    }
 
-    const etapaId = Number(etapa_id);
-    const [et] = await pool.query(
+    const [et] = await conn.query(
       `SELECT id, proyecto_id, estado FROM proyecto_etapas WHERE id = ? LIMIT 1`,
       [etapaId]
     );
-    if (!et.length) return res.status(400).json({ ok: false, message: "Etapa no encontrada" });
+    if (!et.length) {
+      await conn.rollback();
+      return res.status(400).json({ ok: false, message: "Etapa no encontrada" });
+    }
     if (Number(et[0].proyecto_id) !== proyectoId) {
+      await conn.rollback();
       return res.status(400).json({ ok: false, message: "La etapa no pertenece al proyecto" });
     }
-    if (et[0].estado !== "ACTIVA") {
+
+    // ⚠️ Ajusta si tu estado de etapa es distinto
+    if (String(et[0].estado || "").toUpperCase() !== "ACTIVA") {
+      await conn.rollback();
       return res.status(400).json({ ok: false, message: "La etapa no está activa" });
     }
 
-    const matId = Number(material_id);
-    const qty = Number(cantidad);
-
-    const [mat] = await pool.query(`SELECT stock_actual FROM materiales WHERE id = ?`, [matId]);
-    if (!mat.length) return res.status(404).json({ ok: false, message: "Material no encontrado" });
-    if (Number(mat[0].stock_actual) < qty) {
+    const [mat] = await conn.query(`SELECT stock_actual FROM materiales WHERE id = ? LIMIT 1`, [matId]);
+    if (!mat.length) {
+      await conn.rollback();
+      return res.status(404).json({ ok: false, message: "Material no encontrado" });
+    }
+    if (Number(mat[0].stock_actual || 0) < qty) {
+      await conn.rollback();
       return res.status(400).json({ ok: false, message: "Stock insuficiente" });
     }
 
-    await pool.query(
+    await conn.query(
       `INSERT INTO movimientos (material_id, tipo, cantidad, comentario, proyecto_id, etapa_id, usuario_id, creado_en)
        VALUES (?, 'salida', ?, ?, ?, ?, ?, NOW())`,
       [matId, qty, comentario, proyectoId, etapaId, req.user?.id ?? null]
     );
 
-    await pool.query(
+    await conn.query(
       `UPDATE materiales SET stock_actual = stock_actual - ? WHERE id = ?`,
       [qty, matId]
     );
 
-    res.json({ ok: true, message: "Salida a proyecto registrada" });
+    await conn.commit();
+    return res.json({ ok: true, message: "Salida a proyecto registrada" });
   } catch (err) {
+    try { await conn.rollback(); } catch {}
     console.error("❌ registrarSalida:", err);
-    res.status(500).json({ ok: false, message: "Error al registrar salida a proyecto" });
+    return res.status(500).json({ ok: false, message: "Error al registrar salida a proyecto" });
+  } finally {
+    conn.release();
   }
 }
 

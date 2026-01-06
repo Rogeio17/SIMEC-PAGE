@@ -1051,7 +1051,7 @@ document.getElementById("form-editar-material-base")?.addEventListener("submit",
 
   const payload = {
     nombre: form.nombre.value.trim(),
-    codigo: (form.codigo?.value ?? "").trim(), 
+    codigo: (form.codigo?.value ?? "").trim(),
     stock_minimo: Number(form.stock_minimo.value || 0),
     ubicacion: form.ubicacion.value.trim() || null
   };
@@ -1070,8 +1070,6 @@ document.getElementById("form-editar-material-base")?.addEventListener("submit",
   await cargarAdminMateriales(true);
 });
 
-
-
 document.getElementById("form-crear-lote")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!esAdmin()) return alert("Solo admin.");
@@ -1081,7 +1079,6 @@ document.getElementById("form-crear-lote")?.addEventListener("submit", async (e)
 
   const requiere = form.requiere_protocolo.value === "1";
 
-  
   const loteCodigo = (form.lote_codigo?.value || form.nombre_lote?.value || "").trim();
   if (!loteCodigo) return alert("Lote / Código de lote es requerido.");
 
@@ -1114,23 +1111,59 @@ document.getElementById("form-crear-lote")?.addEventListener("submit", async (e)
 });
 
 
+
 document.getElementById("form-ajustar-lote")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!esAdmin()) return alert("Solo admin.");
   if (!adminMaterialSeleccionado) return alert("Selecciona un material.");
 
   const form = e.target;
-  const loteId = form.lote_id.value;
-  if (!loteId) return alert("Selecciona un lote.");
+
+  
+  const loteId = form.lote_id.value || "";
 
   const qty = Number(form.cantidad.value);
   if (!Number.isFinite(qty) || qty <= 0) return alert("Cantidad debe ser mayor a 0.");
 
-  const delta = (form.tipo.value === "entrada") ? qty : -qty;
+  const tipo = String(form.tipo.value || "").toLowerCase(); 
+  const comentario = form.comentario.value.trim() || null;
+
+  
+  if (!loteId) {
+    const endpoint = (tipo === "entrada")
+      ? `${API_BASE}/movimientos/entrada-general`
+      : `${API_BASE}/movimientos/salida-general`;
+
+    const payload = {
+      material_id: adminMaterialSeleccionado.id,
+      cantidad: qty,
+      comentario
+    };
+
+    const res = await apiFetch(endpoint, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!data.ok) return alert(data.message || "No se pudo ajustar el material (sin lote)");
+
+    alert(tipo === "entrada" ? "Entrada registrada (sin lote)" : "Salida registrada (sin lote)");
+    form.reset();
+
+    await cargarMateriales();
+    await cargarMaterialesEnSelectProyecto();
+    await cargarAdminMateriales(true);
+    if (adminMaterialSeleccionado) await cargarLotesMaterial(adminMaterialSeleccionado.id, true);
+    return;
+  }
+
+  
+  const delta = (tipo === "entrada") ? qty : -qty;
 
   const payload = {
     delta,
-    comentario: form.comentario.value.trim() || null
+    comentario
   };
 
   const res = await apiFetch(`${API_BASE}/lotes/${loteId}/ajustar`, {
@@ -1279,6 +1312,7 @@ async function cargarMovimientosGlobal() {
     tbody.appendChild(tr);
   });
 }
+
 
 /* ==================== USUARIOS (ADMIN) ==================== */
 
