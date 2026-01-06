@@ -917,8 +917,10 @@ async function seleccionarMaterialAdmin(materialId, silencioso = false) {
   const f = document.getElementById("form-editar-material-base");
   if (f) {
     f.nombre.value = mat.nombre || "";
+    f.codigo.value = mat.codigo || "";
     f.stock_minimo.value = mat.stock_minimo ?? 0;
     f.ubicacion.value = mat.ubicacion || "";
+    
   }
 
   document.getElementById("btn-desactivar-material")?.addEventListener("click", async () => {
