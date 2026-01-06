@@ -427,3 +427,14 @@ button{ font-family: var(--font); }
   .table-wrapper{ overflow:auto; }
   .table{ min-width: 780px; }
 }
+
+.btn-danger{
+  background:#dc3545;
+  color:#fff;
+  border:none;
+  padding:6px 10px;
+  border-radius:6px;
+  cursor:pointer;
+}
+.btn-danger:hover{ filter: brightness(0.95); }
+.btn-danger:disabled{ opacity:0.6; cursor:not-allowed; }

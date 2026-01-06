@@ -235,6 +235,11 @@
             <div class="card-body">
               <ul id="lista-proyectos" class="list"></ul>
             </div>
+             <label style="display:flex; gap:8px; align-items:center; margin:8px 0;">
+            <input type="checkbox" id="toggle-ver-archivados" />
+               Ver archivados
+           </label>
+
 
             <div class="card-footer">
               <h4>Nuevo Proyecto (solo admin)</h4>
@@ -386,7 +391,7 @@
 
         <div class="grid-2">
 
-          <!-- Lista materiales -->
+          
           <div class="card">
             <div class="card-header">
               <h4>Materiales</h4>
@@ -417,7 +422,7 @@
             </div>
           </div>
 
-          <!-- Panel material + lotes -->
+          
           <div class="card">
             <div class="card-header">
               <h4>Detalle</h4>
@@ -426,7 +431,7 @@
 
             <div class="card-body" id="admin-panel" style="display:none;">
 
-              <!-- EDITAR MATERIAL (SIN LOTES) -->
+             
               <h4>Editar material (sin lotes)</h4>
               <form id="form-editar-material-base" class="form">
                 <div class="form-group">
@@ -434,7 +439,7 @@
                   <input type="text" name="nombre" required />
                 </div>
 
-                <!-- ✅ FIX: ESTE INPUT FALTABA Y CAUSABA el error .value -->
+                
                 <div class="form-group">
                   <label>Stock mínimo</label>
                   <input type="number" name="stock_minimo" step="0.01" />
@@ -463,7 +468,7 @@
 
               <hr class="divider">
 
-              <!-- LOTES -->
+             
               <h4>Lotes</h4>
               <div class="table-wrapper" style="margin-bottom:14px;">
                 <table class="table" id="tabla-admin-lotes">
@@ -484,7 +489,7 @@
                 </table>
               </div>
 
-              <!-- EDITAR LOTE -->
+            
               <div id="panel-editar-lote" style="display:none;">
                 <hr class="divider">
                 <h4>Editar lote</h4>
@@ -541,7 +546,7 @@
               <h4>Agregar lote (compra nueva)</h4>
 <form id="form-crear-lote" class="form">
 
-  <!-- ✅ NUEVO: lote_codigo requerido por backend -->
+  <!-- NUEVO: lote_codigo requerido por backend -->
   <div class="form-group">
     <label>Lote / Código de lote *</label>
     <input type="text" name="lote_codigo" placeholder="Ej: LOTE-001 / Factura-123" required />

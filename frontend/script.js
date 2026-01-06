@@ -202,12 +202,6 @@ document.getElementById("btn-crear-proveedor")?.addEventListener("click", async 
   alert("Proveedor registrado");
 });
 
-/* =========================================================
-   ✅ PARTE A) CREAR PROVEEDOR TAMBIÉN DESDE "AGREGAR LOTE"
-   Requiere en HTML:
-   - input#nuevo-proveedor-nombre-lote
-   - button#btn-crear-proveedor-lote
-   ========================================================= */
 document.getElementById("btn-crear-proveedor-lote")?.addEventListener("click", async () => {
   if (!esAdmin()) return alert("Solo admin puede registrar proveedores.");
 
@@ -315,7 +309,7 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
     stock_minimo: parseFloat(form.stock_minimo.value || 0),
     ubicacion: form.ubicacion.value.trim() || null,
 
-    // ✅ opcionales
+
     proveedor_id: form.proveedor_id.value ? Number(form.proveedor_id.value) : null,
     ticket_numero: form.ticket_numero.value.trim() || null,
     requiere_protocolo: requiere ? 1 : 0,
@@ -340,7 +334,6 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
 
 
 /* ==================== PROYECTOS ==================== */
-
 let proyectoSeleccionadoId = null;
 let etapaActivaId = null;
 let etapaSeleccionadaId = "__ALL__";
@@ -358,7 +351,17 @@ async function cargarProyectos() {
     return;
   }
 
-  (data.proyectos || []).forEach(p => {
+  const toggleArchivados = document.getElementById("toggle-ver-archivados");
+  const verArchivados = !!(toggleArchivados && toggleArchivados.checked);
+
+  const proyectos = (data.proyectos || []).filter(p => {
+    const estado = String(p.estado || "ACTIVO").toUpperCase();
+    return verArchivados ? true : estado !== "ARCHIVADO";
+  });
+
+  proyectos.forEach(p => {
+    const estado = String(p.estado || "ACTIVO").toUpperCase();
+
     const li = document.createElement("li");
     li.style.display = "flex";
     li.style.alignItems = "center";
@@ -366,7 +369,7 @@ async function cargarProyectos() {
     li.style.gap = "10px";
 
     const info = document.createElement("span");
-    info.textContent = `${p.clave} - ${p.nombre} (${p.estado || "ACTIVO"})`;
+    info.textContent = `${p.clave} - ${p.nombre} (${estado})`;
     info.style.cursor = "pointer";
     info.onclick = () => seleccionarProyecto(p);
 
@@ -380,7 +383,10 @@ async function cargarProyectos() {
     btnXlsx.textContent = "Excel";
     btnXlsx.onclick = (e) => {
       e.stopPropagation();
-      descargarArchivo(`${API_BASE}/proyectos/${p.id}/export/excel`, `proyecto_${p.clave}_movimientos.xlsx`);
+      descargarArchivo(
+        `${API_BASE}/proyectos/${p.id}/export/excel`,
+        `proyecto_${p.clave}_movimientos.xlsx`
+      );
     };
 
     const btnPdf = document.createElement("button");
@@ -389,17 +395,99 @@ async function cargarProyectos() {
     btnPdf.textContent = "PDF";
     btnPdf.onclick = (e) => {
       e.stopPropagation();
-      descargarArchivo(`${API_BASE}/proyectos/${p.id}/export/pdf`, `proyecto_${p.clave}_movimientos.pdf`);
+      descargarArchivo(
+        `${API_BASE}/proyectos/${p.id}/export/pdf`,
+        `proyecto_${p.clave}_movimientos.pdf`
+      );
     };
 
     acciones.appendChild(btnXlsx);
     acciones.appendChild(btnPdf);
+
+    // ✅ Archivar / Restaurar / Borrar (solo admin)
+    if (esAdmin()) {
+      if (estado === "ARCHIVADO") {
+        // RESTAURAR
+        const btnRest = document.createElement("button");
+        btnRest.className = "btn-secondary";
+        btnRest.type = "button";
+        btnRest.textContent = "Restaurar";
+        btnRest.onclick = async (e) => {
+          e.stopPropagation();
+
+          const ok = confirm(`¿Restaurar el proyecto ${p.clave} - ${p.nombre}?`);
+          if (!ok) return;
+
+          const r = await apiFetch(`${API_BASE}/proyectos/${p.id}/restaurar`, { method: "PATCH" });
+          const result = await r.json().catch(() => ({}));
+          if (!result.ok) return alert(result.message || "Error al restaurar proyecto");
+
+          alert("Proyecto restaurado");
+          cargarProyectos();
+        };
+
+        acciones.appendChild(btnRest);
+      } else {
+        // ARCHIVAR
+        const btnArch = document.createElement("button");
+        btnArch.className = "btn-secondary";
+        btnArch.type = "button";
+        btnArch.textContent = "Archivar";
+        btnArch.onclick = async (e) => {
+          e.stopPropagation();
+
+          const ok = confirm(`¿Archivar el proyecto ${p.clave} - ${p.nombre}?`);
+          if (!ok) return;
+
+          const r = await apiFetch(`${API_BASE}/proyectos/${p.id}/archivar`, { method: "PATCH" });
+          const result = await r.json().catch(() => ({}));
+          if (!result.ok) return alert(result.message || "Error al archivar proyecto");
+
+          alert("Proyecto archivado");
+          cargarProyectos();
+        };
+
+        acciones.appendChild(btnArch);
+      }
+
+      // BORRAR DEFINITIVO (siempre)
+      const btnDel = document.createElement("button");
+      btnDel.className = "btn-danger";
+      btnDel.type = "button";
+      btnDel.textContent = "Borrar";
+      btnDel.onclick = async (e) => {
+        e.stopPropagation();
+
+        const ok = confirm(
+          `¿Borrar DEFINITIVAMENTE el proyecto ${p.clave} - ${p.nombre}?\n\nEsto elimina etapas y movimientos y regresa stock.`
+        );
+        if (!ok) return;
+
+        const r = await apiFetch(`${API_BASE}/proyectos/${p.id}`, { method: "DELETE" });
+        const result = await r.json().catch(() => ({}));
+        if (!result.ok) return alert(result.message || "Error al borrar proyecto");
+
+        if (proyectoSeleccionadoId === p.id) {
+          proyectoSeleccionadoId = null;
+          etapaActivaId = null;
+          const infoSel = document.getElementById("info-proyecto-seleccionado");
+          if (infoSel) infoSel.textContent = "—";
+        }
+
+        alert("Proyecto borrado definitivamente");
+        cargarProyectos();
+      };
+
+      acciones.appendChild(btnDel);
+    }
 
     li.appendChild(info);
     li.appendChild(acciones);
     ul.appendChild(li);
   });
 }
+
+
 
 async function seleccionarProyecto(proyecto) {
   proyectoSeleccionadoId = proyecto.id;
@@ -928,13 +1016,7 @@ document.getElementById("form-editar-material-base")?.addEventListener("submit",
   await cargarAdminMateriales(true);
 });
 
-/* =========================================================
-   ✅ PARTE B) CREAR LOTE (ENVÍA lote_codigo REQUERIDO)
-   Requiere en HTML:
-   - input name="lote_codigo" dentro de form-crear-lote
-   (si tu HTML tiene name="nombre_lote", cámbialo a lote_codigo
-    o deja ambos y aquí tomo lote_codigo primero)
-   ========================================================= */
+
 
 document.getElementById("form-crear-lote")?.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -945,7 +1027,7 @@ document.getElementById("form-crear-lote")?.addEventListener("submit", async (e)
 
   const requiere = form.requiere_protocolo.value === "1";
 
-  // ✅ usa lote_codigo; si no existe, intenta nombre_lote
+  
   const loteCodigo = (form.lote_codigo?.value || form.nombre_lote?.value || "").trim();
   if (!loteCodigo) return alert("Lote / Código de lote es requerido.");
 
@@ -977,10 +1059,6 @@ document.getElementById("form-crear-lote")?.addEventListener("submit", async (e)
   await cargarLotesMaterial(adminMaterialSeleccionado.id, true);
 });
 
-/* =========================================================
-   ✅ PARTE C) AJUSTAR LOTE (RUTA /ajustar + ENVÍA delta)
-   Tu backend espera { delta, comentario }
-   ========================================================= */
 
 document.getElementById("form-ajustar-lote")?.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -1226,3 +1304,9 @@ document.getElementById("form-usuario")?.addEventListener("submit", async (e) =>
     if (secUsuarios) secUsuarios.style.display = "none";
   }
 })();
+(function initToggleArchivados(){
+  const t = document.getElementById("toggle-ver-archivados");
+  if (!t) return;
+  t.addEventListener("change", cargarProyectos);
+})();
+
