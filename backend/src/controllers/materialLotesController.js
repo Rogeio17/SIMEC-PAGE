@@ -1,8 +1,6 @@
 import pool from "../config/db.js";
 
-/**
- * GET /api/materiales/:materialId/lotes
- */
+
 export async function listarLotesDeMaterial(req, res) {
   try {
     const materialId = Number(req.params.materialId);
@@ -33,13 +31,7 @@ export async function listarLotesDeMaterial(req, res) {
   }
 }
 
-/**
- * POST /api/materiales/:materialId/lotes
- * body: { lote_codigo?, proveedor_id, precio_unitario, ticket_numero, requiere_protocolo, protocolo_texto, cantidad }
- *
- * ✅ FIX: lote_codigo ya NO es obligatorio.
- * Si no viene, se genera automático: "LOT-<materialId>-<YYYYMMDD>-<random>"
- */
+
 export async function crearLoteParaMaterial(req, res) {
   const conn = await pool.getConnection();
   try {
@@ -65,7 +57,7 @@ export async function crearLoteParaMaterial(req, res) {
 
     await conn.beginTransaction();
 
-    // validar material existe
+   
     const [mat] = await conn.query(
       `SELECT id, stock_actual
        FROM materiales
@@ -78,7 +70,7 @@ export async function crearLoteParaMaterial(req, res) {
       return res.status(404).json({ ok: false, message: "Material no existe" });
     }
 
-    // ✅ generar lote_codigo si no vino
+ 
     let loteCode = (lote_codigo && String(lote_codigo).trim()) ? String(lote_codigo).trim() : null;
     if (!loteCode) {
       const d = new Date();
@@ -89,7 +81,7 @@ export async function crearLoteParaMaterial(req, res) {
       loteCode = `LOT-${materialId}-${y}${m}${dd}-${rnd}`;
     }
 
-    // crear lote
+
     await conn.query(
       `INSERT INTO material_lotes
        (material_id, lote_codigo, proveedor_id, precio_unitario, ticket_numero,
@@ -111,7 +103,7 @@ export async function crearLoteParaMaterial(req, res) {
       ]
     );
 
-    // sumar al stock general del material
+
     await conn.query(
       `UPDATE materiales
        SET stock_actual = stock_actual + ?,
@@ -131,10 +123,7 @@ export async function crearLoteParaMaterial(req, res) {
   }
 }
 
-/**
- * PUT /api/lotes/:loteId
- * Edita datos del lote (no cantidad).
- */
+
 export async function actualizarLote(req, res) {
   try {
     const loteId = Number(req.params.loteId);
@@ -182,19 +171,13 @@ export async function actualizarLote(req, res) {
   }
 }
 
-/**
- * POST /api/lotes/:loteId/ajustar
- *
- * ✅ FIX: acepta 2 formatos:
- * 1) { delta: number }   (positivo suma, negativo resta)
- * 2) { tipo: "entrada"|"salida", cantidad: number, comentario? }  (como tu frontend)
- */
+
 export async function ajustarCantidadLote(req, res) {
   const conn = await pool.getConnection();
   try {
     const loteId = Number(req.params.loteId);
 
-    // soportar ambos formatos
+    
     let delta = null;
 
     if (req.body?.delta !== undefined) {
@@ -217,7 +200,7 @@ export async function ajustarCantidadLote(req, res) {
 
     await conn.beginTransaction();
 
-    // obtener lote y material
+ 
     const [rows] = await conn.query(
       `SELECT id, material_id, cantidad_disponible
        FROM material_lotes
@@ -238,7 +221,7 @@ export async function ajustarCantidadLote(req, res) {
       return res.status(400).json({ ok: false, message: "No puedes dejar el lote en negativo" });
     }
 
-    // ajustar lote
+    
     await conn.query(
       `UPDATE material_lotes
        SET cantidad_disponible = ?
@@ -246,7 +229,7 @@ export async function ajustarCantidadLote(req, res) {
       [nueva, loteId]
     );
 
-    // ajustar material stock general
+   
     await conn.query(
       `UPDATE materiales
        SET stock_actual = stock_actual + ?,
@@ -266,12 +249,7 @@ export async function ajustarCantidadLote(req, res) {
   }
 }
 
-/**
- * DELETE /api/lotes/:loteId  (soft delete)
- *
- * ✅ FIX: no deja desactivar si tiene stock disponible.
- * (Para desactivar, primero ajusta a 0 o saca el stock con movimientos)
- */
+
 export async function eliminarLote(req, res) {
   const conn = await pool.getConnection();
   try {

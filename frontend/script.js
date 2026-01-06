@@ -404,10 +404,10 @@ async function cargarProyectos() {
     acciones.appendChild(btnXlsx);
     acciones.appendChild(btnPdf);
 
-    // ✅ Archivar / Restaurar / Borrar (solo admin)
+    
     if (esAdmin()) {
       if (estado === "ARCHIVADO") {
-        // RESTAURAR
+       
         const btnRest = document.createElement("button");
         btnRest.className = "btn-secondary";
         btnRest.type = "button";
@@ -428,7 +428,7 @@ async function cargarProyectos() {
 
         acciones.appendChild(btnRest);
       } else {
-        // ARCHIVAR
+      
         const btnArch = document.createElement("button");
         btnArch.className = "btn-secondary";
         btnArch.type = "button";
@@ -450,7 +450,7 @@ async function cargarProyectos() {
         acciones.appendChild(btnArch);
       }
 
-      // BORRAR DEFINITIVO (siempre)
+      
       const btnDel = document.createElement("button");
       btnDel.className = "btn-danger";
       btnDel.type = "button";

@@ -67,7 +67,7 @@ export async function crearMaterial(req, res) {
 
     const stockInicialNum = Number(stock_inicial) || 0;
 
-    // 1) Crear material
+   
     const [ins] = await conn.query(
       `INSERT INTO materiales
         (codigo, nombre, stock_actual, stock_minimo, ubicacion, activo, creado_en,
@@ -96,7 +96,7 @@ export async function crearMaterial(req, res) {
 
     const materialId = ins.insertId;
 
-    // 2) Crear lote inicial SI hay stock inicial (para que admin-almacén no quede vacío)
+    
     if (stockInicialNum > 0) {
       await conn.query(
         `INSERT INTO material_lotes
@@ -138,46 +138,72 @@ export async function actualizarMaterial(req, res) {
     const id = Number(req.params.id);
 
     const {
-      // codigo opcional
       codigo,
       nombre,
       stock_minimo = 0,
       ubicacion = null,
     } = req.body;
 
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ ok: false, message: "ID inválido" });
+    }
+
     if (!nombre || !String(nombre).trim()) {
       return res.status(400).json({ ok: false, message: "Nombre es requerido" });
     }
 
-    // ✅ codigo opcional: si viene vacío, NO lo tocamos
-    if (codigo !== undefined && String(codigo).trim() !== "") {
-      // validar que no se repita con otro material
-      const [dup] = await pool.query(
-        `SELECT id FROM materiales WHERE codigo = ? AND id <> ? LIMIT 1`,
-        [String(codigo).trim(), id]
-      );
-      if (dup.length) {
-        return res.status(409).json({ ok: false, message: "Ese código ya existe" });
-      }
+   
+    if (codigo !== undefined) {
+      const cod = String(codigo ?? "").trim();
 
-      await pool.query(
-        `UPDATE materiales
-         SET codigo = ?,
-             nombre = ?,
-             stock_minimo = ?,
-             ubicacion = ?,
-             actualizado_por_usuario_id = ?
-         WHERE id = ?`,
-        [
-          String(codigo).trim(),
-          String(nombre).trim(),
-          Number(stock_minimo) || 0,
-          ubicacion || null,
-          req.user?.id ?? null,
-          id,
-        ]
-      );
+      if (cod !== "") {
+       
+        const [dup] = await pool.query(
+          `SELECT id FROM materiales WHERE codigo = ? AND id <> ? LIMIT 1`,
+          [cod, id]
+        );
+        if (dup.length) {
+          return res.status(409).json({ ok: false, message: "Ese código ya existe" });
+        }
+
+        await pool.query(
+          `UPDATE materiales
+           SET codigo = ?,
+               nombre = ?,
+               stock_minimo = ?,
+               ubicacion = ?,
+               actualizado_por_usuario_id = ?
+           WHERE id = ?`,
+          [
+            cod,
+            String(nombre).trim(),
+            Number(stock_minimo) || 0,
+            ubicacion || null,
+            req.user?.id ?? null,
+            id,
+          ]
+        );
+      } else {
+       
+        await pool.query(
+          `UPDATE materiales
+           SET codigo = NULL,
+               nombre = ?,
+               stock_minimo = ?,
+               ubicacion = ?,
+               actualizado_por_usuario_id = ?
+           WHERE id = ?`,
+          [
+            String(nombre).trim(),
+            Number(stock_minimo) || 0,
+            ubicacion || null,
+            req.user?.id ?? null,
+            id,
+          ]
+        );
+      }
     } else {
+ 
       await pool.query(
         `UPDATE materiales
          SET nombre = ?,
@@ -195,14 +221,14 @@ export async function actualizarMaterial(req, res) {
       );
     }
 
-    res.json({ ok: true, message: "Material actualizado" });
+    return res.json({ ok: true, message: "Material actualizado" });
   } catch (err) {
     console.error("❌ actualizarMaterial:", err);
-    res.status(500).json({ ok: false, message: "Error al actualizar material" });
+    return res.status(500).json({ ok: false, message: "Error al actualizar material" });
   }
 }
 
-/* ✅ ESTA FUNCIÓN ES LA QUE TE FALTA EXPORTAR */
+
 export async function eliminarMaterial(req, res) {
   try {
     const id = Number(req.params.id);
