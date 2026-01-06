@@ -814,6 +814,49 @@ async function calcularTotalesProyectoYEtapa() {
   if (te) te.textContent = money(totalEtapa);
 }
 
+
+
+document.getElementById("btn-export-etapa-excel")?.addEventListener("click", (e) => {
+  e.preventDefault();
+
+  if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero.");
+
+
+  if (etapaSeleccionadaId === "__ALL__" || !etapaSeleccionadaId) {
+    return descargarArchivo(
+      `${API_BASE}/proyectos/${proyectoSeleccionadoId}/export/excel`,
+      `proyecto_${proyectoSeleccionadoId}_movimientos.xlsx`
+    );
+  }
+
+  
+  descargarArchivo(
+    `${API_BASE}/proyectos/${proyectoSeleccionadoId}/etapas/${etapaSeleccionadaId}/export/excel`,
+    `proyecto_${proyectoSeleccionadoId}_etapa_${etapaSeleccionadaId}.xlsx`
+  );
+});
+
+document.getElementById("btn-export-etapa-pdf")?.addEventListener("click", (e) => {
+  e.preventDefault();
+
+  if (!proyectoSeleccionadoId) return alert("Selecciona un proyecto primero.");
+
+
+  if (etapaSeleccionadaId === "__ALL__" || !etapaSeleccionadaId) {
+    return descargarArchivo(
+      `${API_BASE}/proyectos/${proyectoSeleccionadoId}/export/pdf`,
+      `proyecto_${proyectoSeleccionadoId}_movimientos.pdf`
+    );
+  }
+
+ 
+  descargarArchivo(
+    `${API_BASE}/proyectos/${proyectoSeleccionadoId}/etapas/${etapaSeleccionadaId}/export/pdf`,
+    `proyecto_${proyectoSeleccionadoId}_etapa_${etapaSeleccionadaId}.pdf`
+  );
+});
+
+
 /* ==================== ADMIN ALMACÉN (material + lotes) ==================== */
 
 let adminMaterialSeleccionado = null;
