@@ -171,7 +171,7 @@ export async function archivarProyecto(req, res) {
 
   try {
     const [rows] = await pool.query(
-      "UPDATE proyectos SET estado = 'ARCHIVADO' WHERE id = ?",
+      "UPDATE proyectos SET estado = 'archivado' WHERE id = ?",
       [id]
     );
 
@@ -195,7 +195,7 @@ export async function restaurarProyecto(req, res) {
 
   try {
     const [rows] = await pool.query(
-      "UPDATE proyectos SET estado = 'ACTIVO' WHERE id = ?",
+      "UPDATE proyectos SET estado = 'abierto' WHERE id = ?",
       [id]
     );
 
