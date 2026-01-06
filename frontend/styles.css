@@ -1,5 +1,5 @@
 :root{
-  /* Material 3 - Light */
+
   --primary: #1e88e5;
   --primary-dark: #1565c0;
 
@@ -14,13 +14,13 @@
 
   --radius: 18px;
 
-  /* sombras M3 suaves */
+  
   --shadow: 0 1px 2px rgba(16,24,40,.06), 0 8px 20px rgba(16,24,40,.08);
   --shadow-hover: 0 2px 5px rgba(16,24,40,.08), 0 14px 34px rgba(16,24,40,.12);
 
   --font: "Roboto", system-ui, -apple-system, Segoe UI, sans-serif;
 
-  /* controles */
+  
   --h: 44px;
   --r: 14px;
 }
@@ -36,9 +36,7 @@ body{
 
 .app{ display:flex; min-height:100vh; }
 
-/* =========================
-   SIDEBAR (M3)
-========================= */
+
 .sidebar{
   width: 270px;
   background: rgba(255,255,255,.85);
@@ -123,9 +121,7 @@ body{
   font-size: .75rem;
 }
 
-/* =========================
-   MAIN / HEADER
-========================= */
+
 .main{ flex:1; padding: 22px; }
 
 .main-header{
@@ -158,9 +154,7 @@ body{
 .seccion.activa{ display:block; animation: fadeIn .18s ease; }
 @keyframes fadeIn{ from{opacity:0; transform: translateY(4px);} to{opacity:1; transform: translateY(0);} }
 
-/* =========================
-   CARDS (M3)
-========================= */
+
 .card{
   background: var(--surface);
   border-radius: var(--radius);
@@ -195,9 +189,7 @@ body{
   background: var(--surface-2);
 }
 
-/* =========================
-   GRID
-========================= */
+
 .grid-2{
   display:grid;
   grid-template-columns: 1fr 1fr;
@@ -207,9 +199,7 @@ body{
   .grid-2{ grid-template-columns: 1fr; }
 }
 
-/* =========================
-   INPUTS (Filled M3)
-========================= */
+
 .form{ display:flex; flex-direction:column; gap: 14px; }
 .form-inline{
   flex-direction: row;
@@ -234,7 +224,7 @@ input, textarea, select{
   height: var(--h);
   border-radius: var(--r);
   border: 1px solid rgba(16,24,40,.10);
-  background: #f3f6fb;           /* filled */
+  background: #f3f6fb;           
   padding: 0 12px;
   font-size: .95rem;
   outline:none;
@@ -253,16 +243,14 @@ input:focus, textarea:focus, select:focus{
   box-shadow: 0 0 0 4px rgba(30,136,229,.14);
 }
 
-/* =========================
-   BOTONES (M3)
-========================= */
+
 button{ font-family: var(--font); }
 
 .btn-primary,
 .btn-secondary{
   height: var(--h);
   padding: 0 14px;
-  border-radius: 999px; /* pill M3 */
+  border-radius: 999px; 
   border: 1px solid transparent;
   cursor:pointer;
 
@@ -280,7 +268,7 @@ button{ font-family: var(--font); }
 .btn-primary .material-icons,
 .btn-secondary .material-icons{ font-size: 20px; line-height:1; }
 
-/* Filled */
+
 .btn-primary{
   background: var(--primary);
   color:#fff;
@@ -292,7 +280,7 @@ button{ font-family: var(--font); }
   border-color: var(--primary-dark);
 }
 
-/* Tonal (M3) */
+
 .btn-secondary{
   background: rgba(30,136,229,.12);
   color: var(--primary-dark);
@@ -302,9 +290,7 @@ button{ font-family: var(--font); }
   background: rgba(30,136,229,.18);
 }
 
-/* =========================
-   TABLAS (M3 clean)
-========================= */
+
 .table-wrapper{
   max-height: 380px;
   overflow:auto;
@@ -318,9 +304,8 @@ button{ font-family: var(--font); }
   border-collapse: separate;
   border-spacing: 0;
   font-size: .92rem;
-  min-width: 740px; /* para móvil: scroll horizontal */
+  min-width: 740px; 
 }
-
 .table thead th{
   position: sticky;
   top: 0;
@@ -436,5 +421,28 @@ button{ font-family: var(--font); }
   border-radius:6px;
   cursor:pointer;
 }
+
+
 .btn-danger:hover{ filter: brightness(0.95); }
 .btn-danger:disabled{ opacity:0.6; cursor:not-allowed; }
+
+/* ==================== PROYECTOS (SELECCIÓN) ==================== */
+
+#lista-proyectos li {
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+#lista-proyectos li:hover {
+  background: #f5f7fa;
+  border-color: #007bff;
+}
+
+#lista-proyectos li.seleccionado {
+  background: #e8f1ff;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.2);
+}

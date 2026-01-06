@@ -354,24 +354,33 @@ async function cargarProyectos() {
   const toggleArchivados = document.getElementById("toggle-ver-archivados");
   const verArchivados = !!(toggleArchivados && toggleArchivados.checked);
 
+  
   const proyectos = (data.proyectos || []).filter(p => {
-    const estado = String(p.estado || "ACTIVO").toUpperCase();
-    return verArchivados ? true : estado !== "ARCHIVADO";
+    const estado = String(p.estado || "abierto").toLowerCase();
+    return verArchivados ? true : estado !== "archivado";
   });
 
   proyectos.forEach(p => {
-    const estado = String(p.estado || "ACTIVO").toUpperCase();
+    const estado = String(p.estado || "abierto").toLowerCase();
 
     const li = document.createElement("li");
+    li.dataset.id = p.id;                
     li.style.display = "flex";
     li.style.alignItems = "center";
     li.style.justifyContent = "space-between";
     li.style.gap = "10px";
+    li.style.cursor = "pointer";     
+
+    li.onclick = () => seleccionarProyecto(p);
+
+  
+    if (Number(proyectoSeleccionadoId) === Number(p.id)) {
+      li.classList.add("seleccionado");
+    }
 
     const info = document.createElement("span");
     info.textContent = `${p.clave} - ${p.nombre} (${estado})`;
-    info.style.cursor = "pointer";
-    info.onclick = () => seleccionarProyecto(p);
+    info.style.pointerEvents = "none";  
 
     const acciones = document.createElement("div");
     acciones.style.display = "flex";
@@ -404,10 +413,8 @@ async function cargarProyectos() {
     acciones.appendChild(btnXlsx);
     acciones.appendChild(btnPdf);
 
-    
     if (esAdmin()) {
-      if (estado === "ARCHIVADO") {
-       
+      if (estado === "archivado") {
         const btnRest = document.createElement("button");
         btnRest.className = "btn-secondary";
         btnRest.type = "button";
@@ -428,7 +435,6 @@ async function cargarProyectos() {
 
         acciones.appendChild(btnRest);
       } else {
-      
         const btnArch = document.createElement("button");
         btnArch.className = "btn-secondary";
         btnArch.type = "button";
@@ -450,7 +456,6 @@ async function cargarProyectos() {
         acciones.appendChild(btnArch);
       }
 
-      
       const btnDel = document.createElement("button");
       btnDel.className = "btn-danger";
       btnDel.type = "button";
@@ -467,7 +472,7 @@ async function cargarProyectos() {
         const result = await r.json().catch(() => ({}));
         if (!result.ok) return alert(result.message || "Error al borrar proyecto");
 
-        if (proyectoSeleccionadoId === p.id) {
+        if (Number(proyectoSeleccionadoId) === Number(p.id)) {
           proyectoSeleccionadoId = null;
           etapaActivaId = null;
           const infoSel = document.getElementById("info-proyecto-seleccionado");
@@ -487,10 +492,13 @@ async function cargarProyectos() {
   });
 }
 
-
-
 async function seleccionarProyecto(proyecto) {
   proyectoSeleccionadoId = proyecto.id;
+
+ 
+  document.querySelectorAll("#lista-proyectos li").forEach(li => {
+    li.classList.toggle("seleccionado", Number(li.dataset.id) === Number(proyecto.id));
+  });
 
   document.getElementById("info-proyecto-seleccionado").textContent =
     `${proyecto.clave} - ${proyecto.nombre}`;
