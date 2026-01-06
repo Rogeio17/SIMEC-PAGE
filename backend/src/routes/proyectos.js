@@ -1,6 +1,6 @@
 import express from "express";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
-import { crearProyecto, listarProyectos, borrarProyecto, archivarProyecto,restaurarProyecto } from "../controllers/proyectosController.js";
+import { crearProyecto, listarProyectos, borrarProyecto, archivarProyecto, restaurarProyecto } from "../controllers/proyectosController.js";
 
 import {
   exportProyectoExcel,
