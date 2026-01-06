@@ -998,6 +998,7 @@ document.getElementById("form-editar-material-base")?.addEventListener("submit",
 
   const payload = {
     nombre: form.nombre.value.trim(),
+    codigo: (form.codigo?.value ?? "").trim(), 
     stock_minimo: Number(form.stock_minimo.value || 0),
     ubicacion: form.ubicacion.value.trim() || null
   };
