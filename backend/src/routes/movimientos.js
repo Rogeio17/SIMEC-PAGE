@@ -15,8 +15,8 @@ const router = express.Router();
 
 router.use(requireAuth);
 
-router.post("/entrada", requireRole("admin"), registrarEntradaGeneral);
-router.post("/salida", requireRole("admin"), registrarSalidaGeneral);
+router.post("/entrada-general", requireRole("admin"), registrarEntradaGeneral);
+router.post("/salida-general", requireRole("admin"), registrarSalidaGeneral);
 
 router.get("/", listarMovimientosGlobal);
 

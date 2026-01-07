@@ -16,7 +16,7 @@ export async function registrarEntradaGeneral(req, res) {
 
     await conn.beginTransaction();
 
-    // validar material existe
+
     const [m] = await conn.query(`SELECT id FROM materiales WHERE id = ? LIMIT 1`, [matId]);
     if (!m.length) {
       await conn.rollback();
@@ -200,7 +200,7 @@ export async function registrarSalida(req, res) {
       return res.status(404).json({ ok: false, message: "Proyecto no encontrado" });
     }
 
-    // ⚠️ Ajusta según tu ENUM real de proyectos: abierto/cerrado/pausado/archivado
+   
     if (String(proj[0].estado || "").toLowerCase() === "cerrado") {
       await conn.rollback();
       return res.status(400).json({ ok: false, message: "El proyecto está cerrado" });
@@ -223,7 +223,7 @@ export async function registrarSalida(req, res) {
       return res.status(400).json({ ok: false, message: "La etapa no pertenece al proyecto" });
     }
 
-    // ⚠️ Ajusta si tu estado de etapa es distinto
+
     if (String(et[0].estado || "").toUpperCase() !== "ACTIVA") {
       await conn.rollback();
       return res.status(400).json({ ok: false, message: "La etapa no está activa" });
