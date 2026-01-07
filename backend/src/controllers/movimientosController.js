@@ -102,19 +102,24 @@ export async function listarMovimientosGlobal(_req, res) {
          mv.proyecto_id, mv.etapa_id, mv.usuario_id, mv.creado_en,
          mat.nombre AS material_nombre,
          u.nombre AS usuario_nombre,
-         u.email AS usuario_email
+         u.email AS usuario_email,
+
+         p.clave  AS proyecto_clave,
+         p.nombre AS proyecto_nombre
        FROM movimientos mv
        JOIN materiales mat ON mat.id = mv.material_id
        LEFT JOIN usuarios u ON u.id = mv.usuario_id
+       LEFT JOIN proyectos p ON p.id = mv.proyecto_id
        ORDER BY mv.id DESC`
     );
 
-    return res.json({ ok: true, movimientos: rows });
+    res.json({ ok: true, movimientos: rows });
   } catch (err) {
     console.error("❌ listarMovimientosGlobal:", err);
-    return res.status(500).json({ ok: false, message: "Error al listar movimientos" });
+    res.status(500).json({ ok: false, message: "Error al listar movimientos" });
   }
 }
+
 
 export async function listarMovimientosPorProyecto(req, res) {
   try {

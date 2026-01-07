@@ -1272,15 +1272,16 @@ async function cargarMovimientosGlobal() {
   (data.movimientos || []).forEach(mv => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${new Date(mv.creado_en).toLocaleString()}</td>
-      <td>${mv.material_nombre || mv.nombre || "-"}</td>
-      <td>${mv.proyecto_id || "-"}</td>
-      <td>${mv.etapa_id || "-"}</td>
-      <td>${mv.tipo}</td>
-      <td>${mv.cantidad}</td>
-      <td>${mv.comentario || ""}</td>
-      <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
-    `;
+  <td>${new Date(mv.creado_en).toLocaleString()}</td>
+  <td>${mv.material_nombre || mv.nombre || "-"}</td>
+  <td>${mv.proyecto_id ? `${mv.proyecto_clave || ""} - ${mv.proyecto_nombre || ""}`.trim() : "-"}</td>
+  <td>${mv.etapa_id || "-"}</td>
+  <td>${mv.tipo}</td>
+  <td>${mv.cantidad}</td>
+  <td>${mv.comentario || ""}</td>
+  <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
+`;
+
     tbody.appendChild(tr);
   });
 }
