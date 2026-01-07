@@ -158,7 +158,7 @@ document.getElementById("btn-export-materiales-pdf")?.addEventListener("click", 
 
 async function cargarProveedores() {
   const select1 = document.getElementById("select-proveedor-material");
-  const select2 = document.getElementById("select-proveedor-lote"); // ✅ para lotes
+  const select2 = document.getElementById("select-proveedor-lote"); 
   if (!select1 && !select2) return;
 
   const res = await apiFetch(`${API_BASE}/proveedores`);
@@ -1112,76 +1112,48 @@ document.getElementById("form-crear-lote")?.addEventListener("submit", async (e)
 
 
 
-document.getElementById("form-ajustar-lote")?.addEventListener("submit", async (e) => {
+/* ====== Ajuste de stock SIN LOTE (desde Editar material) ====== */
+document.getElementById("form-ajustar-material-sin-lote")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!esAdmin()) return alert("Solo admin.");
   if (!adminMaterialSeleccionado) return alert("Selecciona un material.");
 
   const form = e.target;
 
-  
-  const loteId = form.lote_id.value || "";
-
+  const tipo = String(form.tipo.value || "").toLowerCase(); // entrada | salida
   const qty = Number(form.cantidad.value);
-  if (!Number.isFinite(qty) || qty <= 0) return alert("Cantidad debe ser mayor a 0.");
-
-  const tipo = String(form.tipo.value || "").toLowerCase(); 
   const comentario = form.comentario.value.trim() || null;
 
-  
-  if (!loteId) {
-    const endpoint = (tipo === "entrada")
-      ? `${API_BASE}/movimientos/entrada-general`
-      : `${API_BASE}/movimientos/salida-general`;
-
-    const payload = {
-      material_id: adminMaterialSeleccionado.id,
-      cantidad: qty,
-      comentario
-    };
-
-    const res = await apiFetch(endpoint, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json().catch(() => ({}));
-    if (!data.ok) return alert(data.message || "No se pudo ajustar el material (sin lote)");
-
-    alert(tipo === "entrada" ? "Entrada registrada (sin lote)" : "Salida registrada (sin lote)");
-    form.reset();
-
-    await cargarMateriales();
-    await cargarMaterialesEnSelectProyecto();
-    await cargarAdminMateriales(true);
-    if (adminMaterialSeleccionado) await cargarLotesMaterial(adminMaterialSeleccionado.id, true);
-    return;
+  if (!Number.isFinite(qty) || qty <= 0) {
+    return alert("Cantidad debe ser mayor a 0.");
   }
 
-  
-  const delta = (tipo === "entrada") ? qty : -qty;
+  const endpoint = (tipo === "entrada")
+    ? `${API_BASE}/movimientos/entrada-general`
+    : `${API_BASE}/movimientos/salida-general`;
 
   const payload = {
-    delta,
+    material_id: adminMaterialSeleccionado.id,
+    cantidad: qty,
     comentario
   };
 
-  const res = await apiFetch(`${API_BASE}/lotes/${loteId}/ajustar`, {
+  const res = await apiFetch(endpoint, {
     method: "POST",
     body: JSON.stringify(payload)
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!data.ok) return alert(data.message || "No se pudo ajustar el lote");
+  if (!data.ok) return alert(data.message || "No se pudo aplicar el ajuste");
 
-  alert("Ajuste aplicado");
+  alert(tipo === "entrada" ? "Entrada registrada" : "Salida registrada");
   form.reset();
 
   await cargarMateriales();
   await cargarMaterialesEnSelectProyecto();
   await cargarAdminMateriales(true);
-  await cargarLotesMaterial(adminMaterialSeleccionado.id, true);
 });
+
 
 /* ====== Editar lote ====== */
 
