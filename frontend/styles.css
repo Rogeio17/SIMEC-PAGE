@@ -446,3 +446,21 @@ button{ font-family: var(--font); }
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0,123,255,0.2);
 }
+/* ===== Scroll para tabla de materiales del proyecto ===== */
+#tabla-movimientos-proyecto {
+  width: 100%;
+}
+
+#tabla-movimientos-proyecto thead th {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 2;
+}
+
+
+#contenedor-movimientos-proyecto {
+  max-height: 420px;   
+  overflow-y: auto;
+  border-radius: 10px;
+}
