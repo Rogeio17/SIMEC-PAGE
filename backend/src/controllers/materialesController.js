@@ -46,7 +46,7 @@ export async function crearMaterial(req, res) {
     const {
       codigo,
       nombre,
-      unidad = "pza", // ✅ NUEVO (pza | m | kg)
+      unidad = "pza", 
       stock_inicial = 0,
       stock_minimo = 0,
       ubicacion = null,
@@ -57,7 +57,6 @@ export async function crearMaterial(req, res) {
       precio_unitario = null,
     } = req.body;
 
-    // ✅ código ya no es obligatorio (puede ser null/vacío)
     if (!nombre || !String(nombre).trim()) {
       await conn.rollback();
       return res.status(400).json({ ok: false, message: "Nombre es requerido" });
@@ -68,7 +67,6 @@ export async function crearMaterial(req, res) {
     const cod = String(codigo ?? "").trim();
     const codigoFinal = (cod !== "") ? cod : null;
 
-    // ✅ solo valida duplicado si viene código
     if (codigoFinal) {
       const [existe] = await conn.query(
         "SELECT id FROM materiales WHERE codigo = ? LIMIT 1",
@@ -114,7 +112,6 @@ export async function crearMaterial(req, res) {
 
     const materialId = ins.insertId;
 
-    // Si hay stock inicial, crea un lote INICIAL (compatibilidad con tu sistema de lotes)
     if (stockInicialNum > 0) {
       await conn.query(
         `INSERT INTO material_lotes
@@ -146,7 +143,7 @@ export async function crearMaterial(req, res) {
     try { await conn.rollback(); } catch {}
     console.error("❌ crearMaterial:", err);
 
-    // ✅ Mensaje más claro si duplicado
+   
     if (err?.code === "ER_DUP_ENTRY") {
       return res.status(409).json({ ok: false, message: "Ese código ya existe" });
     }
@@ -164,7 +161,7 @@ export async function actualizarMaterial(req, res) {
     const {
       codigo,
       nombre,
-      unidad, // ✅ NUEVO (opcional)
+      unidad, 
       stock_minimo = 0,
       ubicacion = null,
     } = req.body;
@@ -177,11 +174,9 @@ export async function actualizarMaterial(req, res) {
       return res.status(400).json({ ok: false, message: "Nombre es requerido" });
     }
 
-    // Unidad (si viene)
     const setUnidad = (unidad !== undefined);
     const unidadOk = setUnidad ? normalizarUnidad(unidad) : null;
 
-    // Código: si viene undefined => no tocar; si viene "" => NULL; si viene valor => validar duplicado
     if (codigo !== undefined) {
       const cod = String(codigo ?? "").trim();
 
@@ -234,7 +229,7 @@ export async function actualizarMaterial(req, res) {
           );
         }
       } else {
-        // cod vacío => NULL
+    
         if (setUnidad) {
           await pool.query(
             `UPDATE materiales
@@ -274,7 +269,6 @@ export async function actualizarMaterial(req, res) {
         }
       }
     } else {
-      // codigo no viene => no tocar codigo
       if (setUnidad) {
         await pool.query(
           `UPDATE materiales

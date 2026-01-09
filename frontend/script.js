@@ -46,7 +46,7 @@ async function apiFetch(url, options = {}) {
 
   const res = await fetch(url, { ...options, headers });
   if (res.status === 401) logout();
-  return res;
+  return res; 
 }
 
 /* ==================== UI POR ROL ==================== */
@@ -1090,6 +1090,7 @@ document.getElementById("form-editar-material-base")?.addEventListener("submit",
   const payload = {
     nombre: form.nombre.value.trim(),
     codigo: (form.codigo?.value ?? "").trim(),
+    unidad: (form.unidad?.value ?? "pza").trim(),
     stock_minimo: Number(form.stock_minimo.value || 0),
     ubicacion: form.ubicacion.value.trim() || null
   };
