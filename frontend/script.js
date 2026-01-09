@@ -1,3 +1,6 @@
+const API_BASE = "/api";
+
+/* ==================== AUTH HELPERS ==================== */
 function getToken() {
   return localStorage.getItem("token");
 }
