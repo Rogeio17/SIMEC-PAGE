@@ -1,6 +1,6 @@
 import pool from "../config/db.js";
 
-const UNIDADES_VALIDAS = new Set(["pza", "m", "kg"]);
+const UNIDADES_VALIDAS = new Set(["pza", "m", "kg", "lt"]);
 
 function normalizarUnidad(u) {
   const x = String(u || "").trim().toLowerCase();
