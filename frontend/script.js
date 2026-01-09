@@ -509,6 +509,7 @@ async function seleccionarProyecto(proyecto) {
 
   await cargarEtapaActiva(proyectoSeleccionadoId);
   await cargarEtapasProyecto(proyectoSeleccionadoId);
+  await cargarMaterialesEnSelectProyecto({ limpiarFiltro: true });
   await refrescarMovimientosProyecto();
 }
 
@@ -647,15 +648,17 @@ function renderSelectMateriales(lista) {
     const opt = document.createElement("option");
     opt.value = m.id;
 
+    const codigoTxt = (m.codigo && String(m.codigo).trim() !== "") ? String(m.codigo).trim() : "S/C";
+    const unidadTxt = (m.unidad && String(m.unidad).trim() !== "") ? String(m.unidad).trim() : "pza";
+    const stockTxt  = (m.stock_actual !== undefined && m.stock_actual !== null) ? m.stock_actual : 0;
 
-    opt.textContent = `${m.codigo || ""} - ${m.nombre} (${m.unidad || "pza"}) | stock: ${m.stock_actual}`;
+    opt.textContent = `${codigoTxt} - ${m.nombre} (${unidadTxt}) | stock: ${stockTxt}`;
 
-
-    opt.dataset.unidad = (m.unidad || "pza");
+    
+    opt.dataset.unidad = unidadTxt;
 
     select.appendChild(opt);
   });
-
 
   refrescarUnidadCantidadProyecto();
 }
@@ -664,36 +667,39 @@ function refrescarUnidadCantidadProyecto() {
   const select = document.getElementById("select-material-proyecto");
   if (!select) return;
 
-  
-  const sp = document.getElementById("unidad-seleccionada");
   const u = select.selectedOptions?.[0]?.dataset?.unidad || "pza";
+
+
+  const sp = document.getElementById("unidad-seleccionada");
   if (sp) sp.textContent = `(${u})`;
 
-  
-  const inputQty = document.querySelector('#form-agregar-material-proyecto input[name="cantidad"]')
-                || document.querySelector('input[name="cantidad"]');
-
+ 
+  const inputQty = document.querySelector('#form-salida-proyecto input[name="cantidad"]');
   if (inputQty) {
     inputQty.step = (u === "pza") ? "1" : "0.01";
-    inputQty.min  = "0.01";
+    inputQty.min  = (u === "pza") ? "1" : "0.01";
   }
 }
 
-
-document.getElementById("select-material-proyecto")?.addEventListener("change", refrescarUnidadCantidadProyecto);
-
+document.getElementById("select-material-proyecto")
+  ?.addEventListener("change", refrescarUnidadCantidadProyecto);
 
 function filtrarMaterialesSelect(q) {
   q = (q || "").trim().toLowerCase();
   if (!q) return materialesSelectCache;
 
   return materialesSelectCache.filter(m => {
-    const texto = `${m.codigo} ${m.nombre}`.toLowerCase();
+    const codigo = (m.codigo ?? "").toString();
+    const nombre = (m.nombre ?? "").toString();
+    const unidad = (m.unidad ?? "").toString();
+
+    
+    const texto = `${codigo} ${nombre} ${unidad}`.toLowerCase();
     return texto.includes(q);
   });
 }
 
-async function cargarMaterialesEnSelectProyecto() {
+async function cargarMaterialesEnSelectProyecto({ limpiarFiltro = false } = {}) {
   const res = await apiFetch(`${API_BASE}/materiales`);
   const data = await res.json().catch(() => ({}));
 
@@ -703,7 +709,12 @@ async function cargarMaterialesEnSelectProyecto() {
   }
 
   materialesSelectCache = data.materiales || [];
-  const q = document.getElementById("buscar-material-proyecto")?.value || "";
+
+  
+  const inputBuscar = document.getElementById("buscar-material-proyecto");
+  if (limpiarFiltro && inputBuscar) inputBuscar.value = "";
+
+  const q = inputBuscar?.value || "";
   renderSelectMateriales(filtrarMaterialesSelect(q));
 }
 
