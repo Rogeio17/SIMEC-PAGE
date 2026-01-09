@@ -647,7 +647,7 @@ function renderSelectMateriales(lista) {
   lista.forEach(m => {
     const opt = document.createElement("option");
     opt.value = m.id;
-    opt.textContent = `${m.codigo} - ${m.nombre} (stock: ${m.stock_actual})`;
+    opt.textContent = `${m.codigo || ""} - ${m.nombre} (${m.unidad || "pza"}) | stock: ${m.stock_actual}`;
     select.appendChild(opt);
   });
 

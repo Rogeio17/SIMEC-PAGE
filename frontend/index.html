@@ -56,10 +56,10 @@
       </footer>
     </aside>
 
-    <!-- MAIN CONTENT -->
+   
     <main class="main">
 
-      <!-- HEADER -->
+    
       <header class="main-header" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
         <div>
           <h2>Panel de Control</h2>
@@ -83,7 +83,7 @@
 
   <div class="grid-2">
 
-    <!-- Tabla materiales -->
+  
     <div class="card">
       <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
         <h4>Lista de materiales</h4>
@@ -126,7 +126,7 @@
       </div>
     </div>
 
-    <!-- Form nuevo material -->
+    
     <div class="card">
       <div class="card-header">
         <h4>Registrar nuevo material (solo admin)</h4>
@@ -340,7 +340,7 @@
 
                 <div class="form-group">
                   <label>Cantidad</label>
-                  <input type="number" step="0.01" name="cantidad" required />
+                  <input type="number" step="0.01" name="cantidad" min="0.01" required/> 
                 </div>
 
                 <div class="form-group">
