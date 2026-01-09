@@ -101,6 +101,7 @@ export async function listarMovimientosGlobal(_req, res) {
          mv.id, mv.material_id, mv.tipo, mv.cantidad, mv.comentario,
          mv.proyecto_id, mv.etapa_id, mv.usuario_id, mv.creado_en,
          mat.nombre AS material_nombre,
+         mat.unidad AS material_unidad,
          u.nombre AS usuario_nombre,
          u.email AS usuario_email,
 
@@ -129,7 +130,7 @@ export async function listarMovimientosPorProyecto(req, res) {
       `SELECT
          mv.id, mv.material_id, mv.tipo, mv.cantidad, mv.comentario,
          mv.proyecto_id, mv.etapa_id, mv.usuario_id, mv.creado_en,
-         mat.codigo, mat.nombre,
+         mat.codigo, mat.nombre, mat.unidad,
          u.nombre AS usuario_nombre,
          u.email  AS usuario_email
        FROM movimientos mv
@@ -156,7 +157,7 @@ export async function listarMovimientosPorProyectoYEtapa(req, res) {
       `SELECT
          mv.id, mv.material_id, mv.tipo, mv.cantidad, mv.comentario,
          mv.proyecto_id, mv.etapa_id, mv.usuario_id, mv.creado_en,
-         mat.codigo, mat.nombre,
+         mat.codigo, mat.nombre, mat.unidad,
          u.nombre AS usuario_nombre,
          u.email  AS usuario_email
        FROM movimientos mv

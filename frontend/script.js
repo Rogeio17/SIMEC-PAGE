@@ -1,7 +1,3 @@
-const API_BASE = "/api";
-
-/* ==================== AUTH HELPERS ==================== */
-
 function getToken() {
   return localStorage.getItem("token");
 }
@@ -305,6 +301,10 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
     codigo: form.codigo.value.trim(),
     nombre: form.nombre.value.trim(),
 
+    // ✅ Unidad de medida (pza | m | kg | lt)
+    // Si no existe el campo por alguna razón, caemos a pza.
+    unidad: (form.unidad?.value || "pza").trim(),
+
     stock_inicial: parseFloat(form.stock_inicial.value || 0),
     stock_minimo: parseFloat(form.stock_minimo.value || 0),
     ubicacion: form.ubicacion.value.trim() || null,
@@ -330,6 +330,12 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
   toggleProtocoloForm();
 
   await cargarMateriales();
+
+  // ✅ Refresca también el select de materiales en Proyectos (para que aparezcan nuevos)
+  await cargarMaterialesEnSelectProyecto({ limpiarFiltro: true });
+
+  // ✅ Refresca Admin Almacén si está abierto
+  await cargarAdminMateriales(true);
 });
 
 
@@ -1007,6 +1013,7 @@ async function seleccionarMaterialAdmin(materialId, silencioso = false) {
   if (f) {
     f.nombre.value = mat.nombre || "";
     f.codigo.value = mat.codigo || "";
+    if (f.unidad) f.unidad.value = (mat.unidad || "pza");
     f.stock_minimo.value = mat.stock_minimo ?? 0;
     f.ubicacion.value = mat.ubicacion || "";
     

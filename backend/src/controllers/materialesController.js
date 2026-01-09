@@ -1,5 +1,6 @@
 import pool from "../config/db.js";
 
+// Unidades permitidas para materiales. Si llega algo distinto, se normaliza a "pza".
 const UNIDADES_VALIDAS = new Set(["pza", "m", "kg", "lt"]);
 
 function normalizarUnidad(u) {
