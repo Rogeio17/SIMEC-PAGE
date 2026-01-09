@@ -641,20 +641,47 @@ function renderSelectMateriales(lista) {
   const select = document.getElementById("select-material-proyecto");
   if (!select) return;
 
-  const actual = select.value;
   select.innerHTML = "";
 
-  lista.forEach(m => {
+  (lista || []).forEach(m => {
     const opt = document.createElement("option");
     opt.value = m.id;
+
+
     opt.textContent = `${m.codigo || ""} - ${m.nombre} (${m.unidad || "pza"}) | stock: ${m.stock_actual}`;
+
+
+    opt.dataset.unidad = (m.unidad || "pza");
+
     select.appendChild(opt);
   });
 
-  if ([...select.options].some(o => o.value === actual)) {
-    select.value = actual;
+
+  refrescarUnidadCantidadProyecto();
+}
+
+function refrescarUnidadCantidadProyecto() {
+  const select = document.getElementById("select-material-proyecto");
+  if (!select) return;
+
+  
+  const sp = document.getElementById("unidad-seleccionada");
+  const u = select.selectedOptions?.[0]?.dataset?.unidad || "pza";
+  if (sp) sp.textContent = `(${u})`;
+
+  
+  const inputQty = document.querySelector('#form-agregar-material-proyecto input[name="cantidad"]')
+                || document.querySelector('input[name="cantidad"]');
+
+  if (inputQty) {
+    inputQty.step = (u === "pza") ? "1" : "0.01";
+    inputQty.min  = "0.01";
   }
 }
+
+
+document.getElementById("select-material-proyecto")?.addEventListener("change", refrescarUnidadCantidadProyecto);
+
 
 function filtrarMaterialesSelect(q) {
   q = (q || "").trim().toLowerCase();

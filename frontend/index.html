@@ -157,6 +157,15 @@
           </div>
 
           <div class="form-group">
+            <label>Unidad de medida (opcional)</label>
+            <select name="unidad">
+              <option value="pza">Pieza (pza)</option>
+              <option value="kg">Kilogramo (kg)</option>
+              <option value="m">Metro (m)</option>
+              <option value="lt">Litro (lt)</option>
+          </div>
+
+          <div class="form-group">
             <label>Ubicación</label>
             <input type="text" name="ubicacion" />
           </div>
@@ -339,7 +348,7 @@
                 </div>
 
                 <div class="form-group">
-                  <label>Cantidad</label>
+                  <label>Cantidad <span id="unidad-seleccionada">(pza)</span></label>
                   <input type="number" step="0.01" name="cantidad" min="0.01" required />
                 </div>
 
