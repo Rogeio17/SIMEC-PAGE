@@ -326,7 +326,6 @@ button{ font-family: var(--font); }
 .table tbody tr:nth-child(even){ background: rgba(16,24,40,.015); }
 .table tbody tr:hover{ background: rgba(30,136,229,.06); }
 
-/* números alineados (Stock/Cantidad/Precio) */
 .table td:nth-child(3),
 .table td:nth-child(4),
 .table td:nth-child(8){
@@ -366,7 +365,6 @@ button{ font-family: var(--font); }
 .hint{ color: var(--muted); font-size: .85rem; }
 .divider{ border:none; height:1px; background: var(--border); margin: 14px 0; }
 
-/* tus fixes */
 .card, .card-body, .form-inline { overflow: visible !important; }
 #select-material-proyecto { min-width: 280px; }
 
@@ -446,7 +444,6 @@ button{ font-family: var(--font); }
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0,123,255,0.2);
 }
-/* ===== Scroll para tabla de materiales del proyecto ===== */
 #tabla-movimientos-proyecto {
   width: 100%;
 }
@@ -464,3 +461,16 @@ button{ font-family: var(--font); }
   overflow-y: auto;
   border-radius: 10px;
 }
+
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;   
+}
+
+.table {
+  width: 100%;
+  min-width: 900px;   
+  border-collapse: collapse;
+}
+
