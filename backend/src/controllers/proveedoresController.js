@@ -25,7 +25,7 @@ export async function listarProveedores(req, res) {
         OR razon_social LIKE ?
         OR rfc LIKE ?
         OR telefono LIKE ?
-        OR email LIKE ?
+        OR correo LIKE ?
       )`);
       const like = `%${q}%`;
       params.push(like, like, like, like, like);
@@ -44,7 +44,7 @@ export async function listarProveedores(req, res) {
         uso_cfdi,
         contacto,
         telefono,
-        email,
+        correo,
         direccion,
         notas,
         activo,
@@ -72,7 +72,7 @@ export async function listarProveedores(req, res) {
     const uso_cfdi = toNull(req.body.uso_cfdi);
     const contacto = toNull(req.body.contacto);
     const telefono = toNull(req.body.telefono);
-    const email = toNull(req.body.email);
+    const correo = toNull(req.body.correo);
     const direccion = toNull(req.body.direccion);
     const notas = toNull(req.body.notas);
 
@@ -82,7 +82,7 @@ export async function listarProveedores(req, res) {
 
     const [lins] = await pool.query(
       `INSERT INTO proveedores
-        (nombre_comercial, razon_social, rfc, regimen_fiscal, uso_cfdi, contacto, telefono, email, direccion, notas, activo, created_at)
+        (nombre_comercial, razon_social, rfc, regimen_fiscal, uso_cfdi, contacto, telefono, correo, direccion, notas, activo, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
       [
         nombre_comercial,
@@ -92,7 +92,7 @@ export async function listarProveedores(req, res) {
         uso_cfdi,
         contacto,
         telefono,
-        email,
+        correo,
         direccion,
         notas
       ]
@@ -117,7 +117,7 @@ export async function listarProveedores(req, res) {
     const uso_cfdi = toNull(req.body.uso_cfdi);
     const contacto = toNull(req.body.contacto);
     const telefono = toNull(req.body.telefono);
-    const email = toNull(req.body.email);
+    const correo = toNull(req.body.correo);
     const direccion = toNull(req.body.direccion);
     const notas = toNull(req.body.notas);
     const activo = req.body.activo === 1 ? 1 : 0;
@@ -129,7 +129,7 @@ export async function listarProveedores(req, res) {
     await pool.query(
       `UPDATE proveedores SET
         nombre_comercial = ?, razon_social = ?, rfc = ?, regimen_fiscal = ?, uso_cfdi = ?,
-        contacto = ?, telefono = ?, email = ?, direccion = ?, notas = ?, activo = ?
+        contacto = ?, telefono = ?, correo = ?, direccion = ?, notas = ?, activo = ?
       WHERE id = ?`,
       [
         nombre_comercial,
@@ -139,7 +139,7 @@ export async function listarProveedores(req, res) {
         uso_cfdi,
         contacto,
         telefono,
-        email,
+        correo,
         direccion,
         notas,
         activo,
