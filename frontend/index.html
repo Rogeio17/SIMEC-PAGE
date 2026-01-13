@@ -761,72 +761,74 @@
       <!-- =============================
            SECCIÓN: PROVEEDORES
            ============================= -->
-  <section id="proveedores" class="seccion" style="display:none">
-    <div class="card">
-      <div class="card-header">
-        <h3>Proveedores</h3>
-        <p class="small">Registrar Proveedores</p>
+  <section id="proveedores" class="seccion">
+  <div class="card">
+    <div class="card-header">
+      <h3>Proveedores</h3>
+      <p class="small">Registrar Proveedores</p>
 
-        <form id="formProveedo" class="grid-2">
-          <input type="hidden" id="prov_id"/>
+      <form id="formProveedor" class="grid-2">
+        <input type="hidden" id="prov_id"/>
 
-          <div>
-            <label>Nombre Comercial</label>
-            <input id="prov_nombre_comercial" type="text" placeholder="Ej. Grupo SIMEC" required/>
-          </div>
+        <div>
+          <label>Nombre Comercial</label>
+          <input id="prov_nombre_comercial" type="text" placeholder="Ej. Grupo SIMEC" required/>
+        </div>
 
-          <div>
-            <label>Razon Social</label>
-            <input id="prov_razon_social" type="text" placeholder="Ej. SIMEC S.A. de C.V." required/>
-          </div>
+        <div>
+          <label>Razon Social</label>
+          <input id="prov_razon_social" type="text" placeholder="Ej. SIMEC S.A. de C.V." required/>
+        </div>
 
-          <div>
-            <label>RFC</label>
-            <input id="prov_rfc" type="text" placeholder="Ej. SIMC800101XXX" required/>
-          </div>
-          
-          <div>
-            <label> Regimen Fiscal</label>
-            <input id="prov_regimen_fiscal" type="text" placeholder="Ej. General de Ley Personas Morales" required/>
-          </div>
+        <div>
+          <label>RFC</label>
+          <input id="prov_rfc" type="text" placeholder="Ej. SIMC800101XXX" required/>
+        </div>
 
-          <div>
-            <label>Contacto </label>
-            <input id="prov_contacto" type="text" placeholder="Ej. contacto1, contacto2, contacto3" required/>
-          </div>
+        <div>
+          <label>Regimen Fiscal</label>
+          <input id="prov_regimen" type="text" placeholder="Ej. General de Ley Personas Morales" required/>
+        </div>
 
-         <div>
-            <label>Teléfono</label>
-            <input id="prov_telefono" type="text" placeholder="Ej. 55 1234 5678" required/>
-          </div>
+        <div>
+          <label>Contacto</label>
+          <input id="prov_contacto" type="text" placeholder="Ej. contacto1, contacto2" required/>
+        </div>
 
-          <div>
-            <label>Correo Electrónico</label>
-            <input id="prov_email" type="email" placeholder="Ej. contacto@empresa.com" required/>
-         </div>
+        <div>
+          <label>Teléfono</label>
+          <input id="prov_telefono" type="text" placeholder="Ej. 55 1234 5678" required/>
+        </div>
 
-         <div>
+        <div>
+          <label>Correo Electrónico</label>
+          <input id="prov_correo" type="email" placeholder="Ej. contacto@empresa.com" required/>
+        </div>
+
+        <div>
           <label>Uso CFDI (opcional)</label>
-          <input id="prov_uso_cfdi" type="text" placeholder="Ej. Gastos de personal" required/> 
-         </div> 
+          <input id="prov_uso_cfdi" type="text" placeholder="Ej. G03" />
+        </div>
 
-         <div>
-          <label> Direccion</label>
+        <div class="full">
+          <label>Direccion</label>
           <input id="prov_direccion" type="text" placeholder="Ej. Calle 123, Colonia, Ciudad, Estado" required/>
-         </div>
+        </div>
 
-         <div>
-          <label> Notas internas</label>
-          <textarea id="prov_notas_internas" rows="2" placeholder="Notas internas sobre el proveedor"></textarea>
-         </div>
+        <div class="full">
+          <label>Notas internas</label>
+          <textarea id="prov_notas" rows="2" placeholder="Notas internas sobre el proveedor"></textarea>
+        </div>
 
-         <div class="full action">
-          <button type="submit" class="btn-primary" id="btnGuardarProveedor"> Guardar Proveedor</button>
-          <button type="button" class="btn" id="btnLimpiarProveedor"> Limpiar</button> 
-         </div>
-        </form>
-      </div>
-      <div class="card">
+        <div class="full actions">
+          <button type="submit" class="btn-primary" id="btnGuardarProveedor">Guardar Proveedor</button>
+          <button type="button" class="btn" id="btnLimpiarProveedor">Limpiar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="row-between">
       <h3>Lista de proveedores</h3>
       <div class="row">
@@ -857,6 +859,8 @@
       </table>
     </div>
   </div>
+</section>
+
 
       
   </section>
