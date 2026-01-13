@@ -480,51 +480,69 @@ button{ font-family: var(--font); }
   min-width: 1100px; 
 }
 
-/* ================= PROVEEDORES / TABLAS ================= */
-
-.table-wrapper{
-  width: 100%;
-  overflow-x: auto;
-  overflow-y: auto;
+/* =========================
+   PROVEEDORES: layout limpio
+   ========================= */
+#proveedores .card-header{
+  display: block;              
 }
 
-/* tabla general */
-.table{
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 900px;
+#proveedores .card-header h3{
+  margin: 0;
 }
 
-.table th,
-.table td{
-  padding: 10px;
-  border-bottom: 1px solid rgba(16,24,40,.10);
-  text-align: left;
-  white-space: nowrap;
+#proveedores .card-header .small{
+  margin: 4px 0 14px;
+  color: var(--muted);
 }
 
-/* grid del formulario */
-.grid-2{
+
+#proveedores form.grid-2{
+  margin-top: 10px;
+  max-width: 980px;            
+}
+
+#proveedores .grid-2{
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 12px 16px;
+  align-items: end;
 }
 
-.grid-2 .full{
+#proveedores label{
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+
+#proveedores input,
+#proveedores textarea,
+#proveedores select{
+  width: 100%;
+}
+
+
+#proveedores .grid-2 .full{
   grid-column: 1 / -1;
 }
 
-/* botones */
-.actions{
+
+#proveedores .actions{
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 6px;
 }
 
-/* responsive */
+
+#proveedores textarea{
+  resize: vertical;
+  min-height: 80px;
+}
+
+
 @media (max-width: 900px){
-  .grid-2{
-    grid-template-columns: 1fr;
-  }
+  #proveedores .grid-2{ grid-template-columns: 1fr; }
 }
-
