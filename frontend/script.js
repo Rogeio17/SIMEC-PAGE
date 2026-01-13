@@ -111,6 +111,8 @@ function mostrarSeccion(id) {
   if (id === "admin-almacen") cargarAdminMateriales();
   if (id === "movimientos") cargarMovimientosGlobal();
   if (id === "usuarios") cargarUsuarios();
+  if (id === "proveedores") cargarProveedores();
+  if (id === "materiales" || id === "admin-almacen") cargarProveedores?.();
 }
 
 document.querySelectorAll(".nav-btn").forEach(btn => {
