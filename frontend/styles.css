@@ -467,3 +467,16 @@ button{ font-family: var(--font); }
 
 
 
+.card-body.table-wrapper{
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+
+
+.card-body.table-wrapper .table{
+  width: 100% !important;
+  min-width: 1100px; 
+}
+
