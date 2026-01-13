@@ -153,73 +153,7 @@ document.getElementById("btn-export-materiales-pdf")?.addEventListener("click", 
   descargarArchivo(`${API_BASE}/materiales/export/pdf`, "materiales.pdf");
 });
 
-/* ==================== PROVEEDORES (para Materiales) ==================== */
 
-async function cargarProveedores() {
-  const select1 = document.getElementById("select-proveedor-material");
-  const select2 = document.getElementById("select-proveedor-lote"); 
-  if (!select1 && !select2) return;
-
-  const res = await apiFetch(`${API_BASE}/proveedores`);
-  const data = await res.json();
-
-  const llenar = (sel) => {
-    if (!sel) return;
-    sel.innerHTML = `<option value="">—</option>`;
-
-    if (data.ok && Array.isArray(data.proveedores)) {
-      data.proveedores.forEach(p => {
-        const opt = document.createElement("option");
-        opt.value = p.id;
-        opt.textContent = p.nombre;
-        sel.appendChild(opt);
-      });
-    }
-  };
-
-  llenar(select1);
-  llenar(select2);
-}
-
-document.getElementById("btn-crear-proveedor")?.addEventListener("click", async () => {
-  if (!esAdmin()) return alert("Solo admin puede registrar proveedores.");
-
-  const input = document.getElementById("nuevo-proveedor-nombre");
-  const nombre = (input?.value || "").trim();
-  if (!nombre) return alert("Escribe el nombre del proveedor.");
-
-  const res = await apiFetch(`${API_BASE}/proveedores`, {
-    method: "POST",
-    body: JSON.stringify({ nombre })
-  });
-  const data = await res.json();
-
-  if (!data.ok) return alert(data.message || "No se pudo crear proveedor.");
-
-  input.value = "";
-  await cargarProveedores();
-  alert("Proveedor registrado");
-});
-
-document.getElementById("btn-crear-proveedor-lote")?.addEventListener("click", async () => {
-  if (!esAdmin()) return alert("Solo admin puede registrar proveedores.");
-
-  const input = document.getElementById("nuevo-proveedor-nombre-lote");
-  const nombre = (input?.value || "").trim();
-  if (!nombre) return alert("Escribe el nombre del proveedor.");
-
-  const res = await apiFetch(`${API_BASE}/proveedores`, {
-    method: "POST",
-    body: JSON.stringify({ nombre })
-  });
-  const data = await res.json().catch(() => ({}));
-
-  if (!data.ok) return alert(data.message || "No se pudo crear proveedor.");
-
-  if (input) input.value = "";
-  await cargarProveedores();
-  alert("Proveedor registrado");
-});
 
 /* ==================== MATERIALES (TABLA + BUSCADOR + CREAR) ==================== */
 
@@ -304,8 +238,6 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
     codigo: form.codigo.value.trim(),
     nombre: form.nombre.value.trim(),
 
-    // ✅ Unidad de medida (pza | m | kg | lt)
-    // Si no existe el campo por alguna razón, caemos a pza.
     unidad: (form.unidad?.value || "pza").trim(),
 
     stock_inicial: parseFloat(form.stock_inicial.value || 0),
@@ -334,10 +266,8 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
 
   await cargarMateriales();
 
-  // ✅ Refresca también el select de materiales en Proyectos (para que aparezcan nuevos)
   await cargarMaterialesEnSelectProyecto({ limpiarFiltro: true });
 
-  // ✅ Refresca Admin Almacén si está abierto
   await cargarAdminMateriales(true);
 });
 
@@ -1391,6 +1321,184 @@ document.getElementById("form-usuario")?.addEventListener("submit", async (e) =>
   form.reset();
   await cargarUsuarios();
 });
+/* ==================== PROVEEDORES ==================== */
+
+async function apiFetchAuth(url, options = {}) {
+  const headers = options.headers || {};
+  const token = getToken?.() || localStorage.getItem("token");
+  return fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...headers,
+    },
+  });
+}
+
+function limpiarFormProveedor() {
+  document.getElementById("prov_id").value = "";
+  document.getElementById("formProveedor").reset();
+  document.getElementById("btnGuardarProveedor").textContent = "Guardar proveedor";
+}
+
+function getProveedorFormData() {
+  return {
+    nombre_comercial: document.getElementById("prov_nombre_comercial").value.trim(),
+    razon_social: document.getElementById("prov_razon_social").value.trim(),
+    rfc: document.getElementById("prov_rfc").value.trim(),
+    regimen_fiscal: document.getElementById("prov_regimen").value.trim(),
+    uso_cfdi: document.getElementById("prov_uso_cfdi").value.trim(),
+    contacto: document.getElementById("prov_contacto").value.trim(),
+    telefono: document.getElementById("prov_telefono").value.trim(),
+    correo: document.getElementById("prov_correo").value.trim(),
+    direccion: document.getElementById("prov_direccion").value.trim(),
+    notas: document.getElementById("prov_notas").value.trim(),
+  };
+}
+
+async function cargarProveedores() {
+  const q = (document.getElementById("prov_buscar")?.value || "").trim();
+  const activo = document.getElementById("prov_filtro_activo")?.value ?? "1";
+
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (activo !== "all") params.set("activo", activo);
+
+  const res = await apiFetchAuth(`${API_BASE}/proveedores?${params.toString()}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Error cargando proveedores");
+
+  const tbody = document.getElementById("tbodyProveedores");
+  tbody.innerHTML = "";
+
+  (data.proveedores || []).forEach((p) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <strong>${escapeHtml(p.nombre_comercial || "")}</strong><br/>
+        <span class="muted">${escapeHtml(p.razon_social || "")}</span>
+      </td>
+      <td>${escapeHtml(p.rfc || "")}</td>
+      <td>${escapeHtml(p.contacto || "")}</td>
+      <td>${escapeHtml(p.telefono || "")}</td>
+      <td>${escapeHtml(p.correo || "")}</td>
+      <td>${p.activo ? "Activo" : "Inactivo"}</td>
+      <td>
+        <button class="btn" onclick='editarProveedor(${JSON.stringify(p).replaceAll("'", "\\'")})'>Editar</button>
+        ${
+          p.activo
+            ? `<button class="btn" onclick="desactivarProveedor(${p.id})">Desactivar</button>`
+            : `<button class="btn" onclick="activarProveedor(${p.id})">Activar</button>`
+        }
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function editarProveedor(p) {
+  document.getElementById("prov_id").value = p.id;
+  document.getElementById("prov_nombre_comercial").value = p.nombre_comercial || "";
+  document.getElementById("prov_razon_social").value = p.razon_social || "";
+  document.getElementById("prov_rfc").value = p.rfc || "";
+  document.getElementById("prov_regimen").value = p.regimen_fiscal || "";
+  document.getElementById("prov_uso_cfdi").value = p.uso_cfdi || "";
+  document.getElementById("prov_contacto").value = p.contacto || "";
+  document.getElementById("prov_telefono").value = p.telefono || "";
+  document.getElementById("prov_correo").value = p.correo || "";
+  document.getElementById("prov_direccion").value = p.direccion || "";
+  document.getElementById("prov_notas").value = p.notas || "";
+  document.getElementById("btnGuardarProveedor").textContent = "Actualizar proveedor";
+  document.getElementById("proveedores").scrollIntoView({ behavior: "smooth" });
+}
+
+async function guardarProveedor(e) {
+  e.preventDefault();
+  const id = document.getElementById("prov_id").value;
+  const payload = getProveedorFormData();
+
+  if (!payload.nombre_comercial || !payload.razon_social) {
+    alert("Nombre comercial y razón social son obligatorios.");
+    return;
+  }
+
+  const url = id ? `${API_BASE}/proveedores/${id}` : `${API_BASE}/proveedores`;
+  const method = id ? "PUT" : "POST";
+
+  const res = await apiFetchAuth(url, { method, body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Error guardando proveedor");
+
+  limpiarFormProveedor();
+  await cargarProveedores();
+  alert(id ? "Proveedor actualizado." : "Proveedor registrado.");
+}
+
+async function desactivarProveedor(id) {
+  if (!confirm("¿Desactivar proveedor? (No se borra, solo queda inactivo)")) return;
+  const res = await apiFetchAuth(`${API_BASE}/proveedores/${id}/desactivar`, { method: "PATCH" });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Error desactivando");
+  await cargarProveedores();
+}
+
+async function activarProveedor(id) {
+  const res = await apiFetchAuth(`${API_BASE}/proveedores/${id}/activar`, { method: "PATCH" });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Error activando");
+  await cargarProveedores();
+}
+
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function initProveedoresUI() {
+  const form = document.getElementById("formProveedor");
+  if (form) form.addEventListener("submit", guardarProveedor);
+
+  document.getElementById("btnLimpiarProveedor")?.addEventListener("click", limpiarFormProveedor);
+  document.getElementById("btnRefrescarProveedores")?.addEventListener("click", cargarProveedores);
+
+  document.getElementById("prov_buscar")?.addEventListener("input", () => {
+    clearTimeout(window.__provTimer);
+    window.__provTimer = setTimeout(cargarProveedores, 250);
+  });
+
+  document.getElementById("prov_filtro_activo")?.addEventListener("change", cargarProveedores);
+}
+
+initProveedoresUI();
+
+/// Cargar proveedores en selects
+async function cargarProveedoresSelects() {
+  const selects = [
+    document.getElementById("select-proveedor-material"),
+    document.getElementById("select-proveedor-lote"),
+  ].filter(Boolean);
+
+  if (!selects.length) return;
+
+  const res = await apiFetchAuth(`${API_BASE}/proveedores?activo=1`);
+  const data = await res.json();
+
+  selects.forEach(sel => {
+    sel.innerHTML = `<option value="">— Selecciona proveedor —</option>`;
+    (data.proveedores || []).forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.nombre_comercial;
+      sel.appendChild(opt);
+    });
+  });
+}
+
 
 /* ==================== INIT ==================== */
 

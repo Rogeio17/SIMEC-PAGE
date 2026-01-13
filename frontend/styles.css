@@ -480,3 +480,51 @@ button{ font-family: var(--font); }
   min-width: 1100px; 
 }
 
+/* ================= PROVEEDORES / TABLAS ================= */
+
+.table-wrapper{
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+/* tabla general */
+.table{
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.table th,
+.table td{
+  padding: 10px;
+  border-bottom: 1px solid rgba(16,24,40,.10);
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* grid del formulario */
+.grid-2{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.grid-2 .full{
+  grid-column: 1 / -1;
+}
+
+/* botones */
+.actions{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* responsive */
+@media (max-width: 900px){
+  .grid-2{
+    grid-template-columns: 1fr;
+  }
+}
+

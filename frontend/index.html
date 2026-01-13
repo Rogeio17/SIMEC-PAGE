@@ -49,6 +49,11 @@
           <span class="material-icons">manage_accounts</span>
           Usuarios
         </button>
+
+        <button class="nav-btn" data-section="proveedores">
+          <span class="material-icons">local_shipping</span>
+          Proveedores
+        </button>
       </nav>
 
       <footer class="sidebar-footer">
@@ -755,6 +760,106 @@
 
     </main>
   </div>
+
+  <section id="proveedores" class="seccion" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <h3>Proveedores</h3>
+        <p class="small">Registrar Proveedores</p>
+
+        <form id="formProveedo" class="grid-2">
+          <input type="hidden" id="prov_id"/>
+
+          <div>
+            <label>Nombre Comercial</label>
+            <input id="prov_nombre_comercial" type="text" placeholder="Ej. Grupo SIMEC" required/>
+          </div>
+
+          <div>
+            <label>Razon Social</label>
+            <input id="prov_razon_social" type="text" placeholder="Ej. SIMEC S.A. de C.V." required/>
+          </div>
+
+          <div>
+            <label>RFC</label>
+            <input id="prov_rfc" type="text" placeholder="Ej. SIMC800101XXX" required/>
+          </div>
+          
+          <div>
+            <label> Regimen Fiscal</label>
+            <input id="prov_regimen_fiscal" type="text" placeholder="Ej. General de Ley Personas Morales" required/>
+          </div>
+
+          <div>
+            <label>Contacto </label>
+            <input id="prov_contacto" type="text" placeholder="Ej. contacto1, contacto2, contacto3" required/>
+          </div>
+
+         <div>
+            <label>Teléfono</label>
+            <input id="prov_telefono" type="text" placeholder="Ej. 55 1234 5678" required/>
+          </div>
+
+          <div>
+            <label>Correo Electrónico</label>
+            <input id="prov_email" type="email" placeholder="Ej. contacto@empresa.com" required/>
+         </div>
+
+         <div>
+          <label>Uso CFDI (opcional)</label>
+          <input id="prov_uso_cfdi" type="text" placeholder="Ej. Gastos de personal" required/> 
+         </div> 
+
+         <div>
+          <label> Direccion</label>
+          <input id="prov_direccion" type="text" placeholder="Ej. Calle 123, Colonia, Ciudad, Estado" required/>
+         </div>
+
+         <div>
+          <label> Notas internas</label>
+          <textarea id="prov_notas_internas" rows="2" placeholder="Notas internas sobre el proveedor"></textarea>
+         </div>
+
+         <div class="full action">
+          <button type="submit" class="btn-primary" id="btnGuardarProveedor"> Guardar Proveedor</button>
+          <button type="submit" class="btn" id="btnLimpiarProveedor"> Limpiar</button> 
+         </div>
+        </form>
+      </div>
+      <div class="card">
+    <div class="row-between">
+      <h3>Lista de proveedores</h3>
+      <div class="row">
+        <input id="prov_buscar" type="text" placeholder="Buscar..." />
+        <select id="prov_filtro_activo">
+          <option value="1" selected>Activos</option>
+          <option value="0">Inactivos</option>
+          <option value="all">Todos</option>
+        </select>
+        <button class="btn" id="btnRefrescarProveedores">Refrescar</button>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Proveedor</th>
+            <th>RFC</th>
+            <th>Contacto</th>
+            <th>Teléfono</th>
+            <th>Correo</th>
+            <th>Estatus</th>
+            <th style="width:180px;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyProveedores"></tbody>
+      </table>
+    </div>
+  </div>
+
+      
+  </section>
 
   <script src="script.js"></script>
 </body>
