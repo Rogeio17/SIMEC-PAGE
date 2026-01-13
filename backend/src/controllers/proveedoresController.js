@@ -62,7 +62,8 @@ export async function listarProveedores(req, res) {
     res.status(500).json({ ok: false, message: "Error al listar proveedores" });
   }
 }
- export async function crearProvedor(req, res) {
+
+ export async function crearProveedor(req, res) {
   try {
     const nombre_comercial = toNull(req.body.nombre_comercial ?? req.body.nombre);
     const razon_social = toNull(req.body.razon_social);

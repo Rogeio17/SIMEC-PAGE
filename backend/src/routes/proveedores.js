@@ -8,9 +8,10 @@ router.use(requireAuth);
 
 
 router.get("/", listarProveedores);
+router.post("/", requireRole("admin"), crearProveedor);
 router.put("/:id", requireRole("admin"), actualizarProvedor);
 router.patch("/:id/activar", requireRole("admin"), activarProveedor);
 router.patch("/:id/desactivar", requireRole("admin"), desactivarProveedor);
-router.post("/", requireRole("admin"), crearProveedor);
+
 
 export default router;
