@@ -96,7 +96,7 @@ export async function crearMaterial(req, res) {
       [
         codigoFinal,
         String(nombre).trim(),
-        unidadOk, // ✅ NUEVO
+        unidadOk, 
         stockInicialNum,
         Number(stock_minimo) || 0,
         ubicacion || null,
