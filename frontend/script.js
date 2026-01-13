@@ -1478,7 +1478,6 @@ function initProveedoresUI() {
 
 initProveedoresUI();
 
-/// Cargar proveedores en selects
 async function cargarProveedoresSelects() {
   const selects = [
     document.getElementById("select-proveedor-material"),
@@ -1495,7 +1494,7 @@ async function cargarProveedoresSelects() {
     (data.proveedores || []).forEach(p => {
       const opt = document.createElement("option");
       opt.value = p.id;
-      opt.textContent = p.nombre_comercial;
+      opt.textContent = p.nombre_comercial || p.nombre || "(Sin nombre)";
       sel.appendChild(opt);
     });
   });
@@ -1514,6 +1513,8 @@ async function cargarProveedoresSelects() {
   cargarProyectos();
   cargarMaterialesEnSelectProyecto();
   cargarProveedores();
+  cargarProveedoresSelects();
+
 
   setAdminPanelVisible(false);
 
