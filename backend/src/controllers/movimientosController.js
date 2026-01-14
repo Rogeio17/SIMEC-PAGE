@@ -48,16 +48,26 @@ export async function registrarEntradaGeneral(req, res) {
 export async function registrarSalidaGeneral(req, res) {
   const conn = await pool.getConnection();
   try {
-    const { material_id, cantidad, comentario = null } = req.body;
+    const { material_id, cantidad, comentario = null, entregado_a_empleado_id = null } = req.body;
 
     const matId = Number(material_id);
     const qty = Number(cantidad);
+    const empId = entregado_a_empleado_id ? Number(entregado_a_empleado_id) : null;
 
     if (!Number.isFinite(matId) || matId <= 0 || !Number.isFinite(qty) || qty <= 0) {
       return res.status(400).json({ ok: false, message: "material_id y cantidad válidos requeridos" });
     }
 
     await conn.beginTransaction();
+
+    // Validar empleado (opcional)
+    if (empId) {
+      const [emp] = await conn.query(`SELECT id FROM empleados WHERE id = ? AND activo = 1 LIMIT 1`, [empId]);
+      if (!emp.length) {
+        await conn.rollback();
+        return res.status(400).json({ ok: false, message: "Empleado inválido o inactivo" });
+      }
+    }
 
     const [mat] = await conn.query(`SELECT stock_actual FROM materiales WHERE id = ? LIMIT 1`, [matId]);
     if (!mat.length) {
@@ -71,9 +81,9 @@ export async function registrarSalidaGeneral(req, res) {
     }
 
     await conn.query(
-      `INSERT INTO movimientos (material_id, tipo, cantidad, comentario, proyecto_id, etapa_id, usuario_id, creado_en)
-       VALUES (?, 'salida', ?, ?, NULL, NULL, ?, NOW())`,
-      [matId, qty, comentario, req.user?.id ?? null]
+      `INSERT INTO movimientos (material_id, tipo, cantidad, comentario, proyecto_id, etapa_id, usuario_id, entregado_a_empleado_id, creado_en)
+       VALUES (?, 'salida', ?, ?, NULL, NULL, ?, ?, NOW())`,
+      [matId, qty, comentario, req.user?.id ?? null, empId]
     );
 
     await conn.query(
@@ -99,17 +109,20 @@ export async function listarMovimientosGlobal(_req, res) {
     const [rows] = await pool.query(
       `SELECT
          mv.id, mv.material_id, mv.tipo, mv.cantidad, mv.comentario,
-         mv.proyecto_id, mv.etapa_id, mv.usuario_id, mv.creado_en,
+         mv.proyecto_id, mv.etapa_id, mv.usuario_id, mv.entregado_a_empleado_id, mv.creado_en,
          mat.nombre AS material_nombre,
          mat.unidad AS material_unidad,
          u.nombre AS usuario_nombre,
          u.email AS usuario_email,
+         e.nombre AS empleado_nombre,
+         e.puesto AS empleado_puesto,
 
          p.clave  AS proyecto_clave,
          p.nombre AS proyecto_nombre
        FROM movimientos mv
        JOIN materiales mat ON mat.id = mv.material_id
        LEFT JOIN usuarios u ON u.id = mv.usuario_id
+       LEFT JOIN empleados e ON e.id = mv.entregado_a_empleado_id
        LEFT JOIN proyectos p ON p.id = mv.proyecto_id
        ORDER BY mv.id DESC`
     );
@@ -129,13 +142,16 @@ export async function listarMovimientosPorProyecto(req, res) {
     const [rows] = await pool.query(
       `SELECT
          mv.id, mv.material_id, mv.tipo, mv.cantidad, mv.comentario,
-         mv.proyecto_id, mv.etapa_id, mv.usuario_id, mv.creado_en,
+         mv.proyecto_id, mv.etapa_id, mv.usuario_id, mv.entregado_a_empleado_id, mv.creado_en,
          mat.codigo, mat.nombre, mat.unidad,
          u.nombre AS usuario_nombre,
-         u.email  AS usuario_email
+         u.email  AS usuario_email,
+         e.nombre AS empleado_nombre,
+         e.puesto AS empleado_puesto
        FROM movimientos mv
        JOIN materiales mat ON mat.id = mv.material_id
        LEFT JOIN usuarios u ON u.id = mv.usuario_id
+       LEFT JOIN empleados e ON e.id = mv.entregado_a_empleado_id
        WHERE mv.proyecto_id = ?
        ORDER BY mv.id DESC`,
       [proyectoId]
@@ -156,13 +172,16 @@ export async function listarMovimientosPorProyectoYEtapa(req, res) {
     const [rows] = await pool.query(
       `SELECT
          mv.id, mv.material_id, mv.tipo, mv.cantidad, mv.comentario,
-         mv.proyecto_id, mv.etapa_id, mv.usuario_id, mv.creado_en,
+         mv.proyecto_id, mv.etapa_id, mv.usuario_id, mv.entregado_a_empleado_id, mv.creado_en,
          mat.codigo, mat.nombre, mat.unidad,
          u.nombre AS usuario_nombre,
-         u.email  AS usuario_email
+         u.email  AS usuario_email,
+         e.nombre AS empleado_nombre,
+         e.puesto AS empleado_puesto
        FROM movimientos mv
        JOIN materiales mat ON mat.id = mv.material_id
        LEFT JOIN usuarios u ON u.id = mv.usuario_id
+       LEFT JOIN empleados e ON e.id = mv.entregado_a_empleado_id
        WHERE mv.proyecto_id = ? AND mv.etapa_id = ?
        ORDER BY mv.id DESC`,
       [proyectoId, etapaId]
@@ -181,11 +200,12 @@ export async function registrarSalida(req, res) {
   const conn = await pool.getConnection();
   try {
     const proyectoId = Number(req.params.id);
-    const { material_id, cantidad, comentario = null, etapa_id = null } = req.body;
+    const { material_id, cantidad, comentario = null, etapa_id = null, entregado_a_empleado_id = null } = req.body;
 
     const matId = Number(material_id);
     const qty = Number(cantidad);
     const etapaId = Number(etapa_id);
+    const empId = entregado_a_empleado_id ? Number(entregado_a_empleado_id) : null;
 
     if (!Number.isFinite(matId) || matId <= 0 || !Number.isFinite(qty) || qty <= 0) {
       return res.status(400).json({ ok: false, message: "material_id y cantidad válidos requeridos" });
@@ -196,6 +216,15 @@ export async function registrarSalida(req, res) {
     }
 
     await conn.beginTransaction();
+
+    // Validar empleado (opcional)
+    if (empId) {
+      const [emp] = await conn.query(`SELECT id FROM empleados WHERE id = ? AND activo = 1 LIMIT 1`, [empId]);
+      if (!emp.length) {
+        await conn.rollback();
+        return res.status(400).json({ ok: false, message: "Empleado inválido o inactivo" });
+      }
+    }
 
     const [proj] = await conn.query(
       "SELECT id, estado FROM proyectos WHERE id = ? LIMIT 1",
@@ -246,9 +275,9 @@ export async function registrarSalida(req, res) {
     }
 
     await conn.query(
-      `INSERT INTO movimientos (material_id, tipo, cantidad, comentario, proyecto_id, etapa_id, usuario_id, creado_en)
-       VALUES (?, 'salida', ?, ?, ?, ?, ?, NOW())`,
-      [matId, qty, comentario, proyectoId, etapaId, req.user?.id ?? null]
+      `INSERT INTO movimientos (material_id, tipo, cantidad, comentario, proyecto_id, etapa_id, usuario_id, entregado_a_empleado_id, creado_en)
+       VALUES (?, 'salida', ?, ?, ?, ?, ?, ?, NOW())`,
+      [matId, qty, comentario, proyectoId, etapaId, req.user?.id ?? null, empId]
     );
 
     await conn.query(

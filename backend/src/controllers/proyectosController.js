@@ -75,10 +75,14 @@ export async function obtenerMaterialesDeProyecto(req, res) {
          mv.cantidad,
          mv.comentario,
          mv.etapa_id,
+         mv.entregado_a_empleado_id,
+         e.nombre AS empleado_nombre,
+         e.puesto AS empleado_puesto,
          mat.codigo,
          mat.nombre
        FROM movimientos mv
        JOIN materiales mat ON mat.id = mv.material_id
+       LEFT JOIN empleados e ON e.id = mv.entregado_a_empleado_id
        WHERE mv.proyecto_id = ?
        ORDER BY mv.creado_en DESC`,
       [proyectoId]

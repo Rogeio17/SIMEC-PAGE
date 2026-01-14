@@ -50,6 +50,10 @@
           Usuarios
         </button>
 
+        <button class="nav-btn" data-section="empleados" id="btn-nav-empleados" style="display:none;">
+          <span class="material-icons">people</span>
+          Empleados
+
         <button class="nav-btn" data-section="proveedores">
           <span class="material-icons">local_shipping</span>
           Proveedores
@@ -357,6 +361,16 @@
                   <input type="text" name="comentario" />
                 </div>
 
+                <div class="form-group" style="min-width:260px;">
+  <label>¿Quién se lo lleva?</label>
+  <div class="select-wrap">
+    <input id="empleado_buscar" type="text" placeholder="Buscar empleado..." autocomplete="off" />
+    <select id="empleado_select" size="6"></select>
+  </div>
+</div>
+
+
+
                 <button class="btn-primary" type="submit" id="btn-salida-proyecto" disabled>
                   <span class="material-icons">send</span>
                   Registrar salida (solo admin)
@@ -376,6 +390,7 @@
                     <th>Material</th>
                     <th>Tipo</th>
                     <th>Cantidad</th>
+                    <th>Entregado a</th>
                     <th>Comentario</th>
                     <th>Usuario</th>
                   </tr>
@@ -668,6 +683,7 @@
                   <th>Etapa</th>
                   <th>Tipo</th>
                   <th>Cantidad</th>
+                  <th>Entregado a</th>
                   <th>Comentario</th>
                   <th>Usuario</th>
                 </tr>
@@ -751,6 +767,94 @@
           </div>
         </div>
       </section>
+
+      <!-- =============================
+           SECCIÓN: EMPLEADOS
+           ============================= -->      
+        <section id="empleados" class="seccion">
+  <div class="section-title">
+    <h3>Empleados</h3>
+    <p>Gestión de empleados de la empresa.</p>
+  </div>
+
+  <div class="gird-2">
+    <div class="card">
+      <div class="card-header">
+        <h4>Registrar Empleados</h4>
+        <p class="small">Estos empleados se usan para la salida de material. </p>
+      </div>
+      
+      <div class="card-body">
+        <form id="formEmpleado" class="form">
+          <div class="form-group">
+            <label>Nombre</label>
+            <input id="emp_nombre" type="text" placeholder="Ej. Juan Pérez" required/>
+          </div>
+          <div class="form-group">
+            <label>Puesto</label>
+            <input id="emp_puesto" type="text" placeholder="Ej. Compras" required/>
+          </div>
+          <div class="form-group">
+            <label>Telefono</label>
+            <input id="emp_telefono" type="text" placeholder="Ej. 55 1234 5678" required/>
+          </div>
+
+          <button class="btn-primary" type="submit">
+            <span class="material-icons">save</span> Guardar Empleado
+          </button>
+
+          <p class="hint" style="margin-top:8px;">Solo admin puede registrar empleados </p>
+
+          </form>
+        </div>
+      </div>
+      <div class="card">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div>
+          <h4>Lista de empleados</h4>
+          <p class="small">Buscar y filtrar empleados.</p>
+        </div>
+
+        <button class="btn-secondary" type="button" id="btnRefrescarEmpleados">
+          Refrescar
+        </button>
+      </div>
+
+      <div class="card-body">
+        <div class="grid-2" style="margin-bottom:12px;">
+          <div class="form-group">
+            <label>Buscar</label>
+            <input id="emp_buscar" type="text" placeholder="Nombre, puesto o teléfono..."/>
+          </div>
+
+          <div class="form-group">
+            <label>Filtro</label>
+            <select id="emp_filtro_activo">
+              <option value="1" selected>Activos</option>
+              <option value="0">Inactivos</option>
+              <option value="all">Todos</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="table" id="tabla-empleados">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Puesto</th>
+                <th>Teléfono</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 
       <!-- =============================
            SECCIÓN: PROVEEDORES

@@ -546,3 +546,49 @@ button{ font-family: var(--font); }
 @media (max-width: 900px){
   #proveedores .grid-2{ grid-template-columns: 1fr; }
 }
+
+
+/* ==================== EMPLEADOS (selector + sección) ==================== */
+.select-wrap{
+  display: grid;
+  gap: 10px;
+}
+
+#empleado_buscar,
+#emp_buscar{
+  width: 100%;
+}
+
+#empleado_select{
+  width: 100%;
+  min-height: 160px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  outline: none;
+}
+
+#empleado_select option{
+  padding: 10px;
+}
+
+#empleado_select option:checked{
+  background: rgba(30,136,229,.15);
+}
+
+/* Separadores por día en tablas de movimientos */
+.tr-dia-sep td{
+  padding: 10px 12px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--surface-2);
+  border-top: 1px solid rgba(16,24,40,.10);
+}
+
+.tr-gap td{
+  padding: 10px 12px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-top: 1px dashed rgba(16,24,40,.18);
+}

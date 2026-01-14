@@ -63,6 +63,9 @@ function aplicarUIporRol() {
   const btnUsuarios = document.getElementById("btn-nav-usuarios");
   if (btnUsuarios) btnUsuarios.style.display = admin ? "flex" : "none";
 
+  const btnEmpleados = document.getElementById("btn-nav-empleados");
+  if (btnEmpleados) btnEmpleados.style.display = admin ? "flex" : "none";
+
   const btnAdminAlmacen = document.getElementById("btn-nav-admin-almacen");
   if (btnAdminAlmacen) btnAdminAlmacen.style.display = admin ? "flex" : "none";
 
@@ -111,6 +114,7 @@ function mostrarSeccion(id) {
   if (id === "admin-almacen") cargarAdminMateriales();
   if (id === "movimientos") cargarMovimientosGlobal();
   if (id === "usuarios") cargarUsuarios();
+  if (id === "empleados") cargarEmpleados();
   if (id === "proveedores") cargarProveedores();
   if (id === "materiales" || id === "admin-almacen") cargarProveedores?.();
 }
@@ -451,6 +455,7 @@ async function seleccionarProyecto(proyecto) {
   await cargarEtapaActiva(proyectoSeleccionadoId);
   await cargarEtapasProyecto(proyectoSeleccionadoId);
   await cargarMaterialesEnSelectProyecto({ limpiarFiltro: true });
+  await prepararSelectorEmpleadosSalida();
   await refrescarMovimientosProyecto();
 }
 
@@ -675,7 +680,44 @@ async function cargarMovimientosDeProyecto(proyectoId) {
 
   if (!data.ok) return alert(data.message || "Error al cargar movimientos del proyecto");
 
-  (data.movimientos || []).forEach(mv => {
+  const lista = data.movimientos || [];
+  // Orden por fecha asc para agrupar en render
+  lista.sort((a,b) => new Date(a.creado_en) - new Date(b.creado_en));
+
+  let lastDate = null;
+
+  const dayKey = (d) => {
+    const x = new Date(d);
+    return `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
+  };
+
+  const daysDiff = (a,b) => {
+    const da = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+    const db = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+    return Math.round((da - db) / (1000*60*60*24));
+  };
+
+  for (const mv of lista) {
+    const dt = new Date(mv.creado_en);
+    if (!lastDate || dayKey(dt) !== dayKey(lastDate)) {
+      if (lastDate) {
+        const diff = Math.abs(daysDiff(lastDate, dt));
+        if (diff >= 2) {
+          const trGap = document.createElement("tr");
+          trGap.className = "tr-gap";
+          trGap.innerHTML = `<td colspan="7">⏳ Pasaron ${diff-1} día(s) sin movimientos</td>`;
+          tbody.appendChild(trGap);
+        }
+      }
+
+      const trSep = document.createElement("tr");
+      trSep.className = "tr-dia-sep";
+      trSep.innerHTML = `<td colspan="7">${dt.toLocaleDateString("es-MX", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}</td>`;
+      tbody.appendChild(trSep);
+      lastDate = dt;
+    }
+
+    const emp = mv.empleado_nombre ? `${mv.empleado_nombre}${mv.empleado_puesto ? " — " + mv.empleado_puesto : ""}` : "";
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${new Date(mv.creado_en).toLocaleString()}</td>
@@ -684,10 +726,12 @@ async function cargarMovimientosDeProyecto(proyectoId) {
       <td>${mv.cantidad}</td>
       <td>${mv.comentario || ""}</td>
       <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
+      <td>${emp || "-"}</td>
     `;
     tbody.appendChild(tr);
-  });
+  }
 }
+
 
 async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
   const res = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoId}/etapa/${etapaId}/movimientos`);
@@ -697,9 +741,46 @@ async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
   if (!tbody) return;
   tbody.innerHTML = "";
 
-  if (!data.ok) return alert(data.message || "Error al cargar movimientos de la etapa");
+  if (!data.ok) return alert(data.message || "Error al cargar movimientos del proyecto");
 
-  (data.movimientos || []).forEach(mv => {
+  const lista = data.movimientos || [];
+  // Orden por fecha asc para agrupar en render
+  lista.sort((a,b) => new Date(a.creado_en) - new Date(b.creado_en));
+
+  let lastDate = null;
+
+  const dayKey = (d) => {
+    const x = new Date(d);
+    return `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
+  };
+
+  const daysDiff = (a,b) => {
+    const da = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+    const db = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+    return Math.round((da - db) / (1000*60*60*24));
+  };
+
+  for (const mv of lista) {
+    const dt = new Date(mv.creado_en);
+    if (!lastDate || dayKey(dt) !== dayKey(lastDate)) {
+      if (lastDate) {
+        const diff = Math.abs(daysDiff(lastDate, dt));
+        if (diff >= 2) {
+          const trGap = document.createElement("tr");
+          trGap.className = "tr-gap";
+          trGap.innerHTML = `<td colspan="7">⏳ Pasaron ${diff-1} día(s) sin movimientos</td>`;
+          tbody.appendChild(trGap);
+        }
+      }
+
+      const trSep = document.createElement("tr");
+      trSep.className = "tr-dia-sep";
+      trSep.innerHTML = `<td colspan="7">${dt.toLocaleDateString("es-MX", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}</td>`;
+      tbody.appendChild(trSep);
+      lastDate = dt;
+    }
+
+    const emp = mv.empleado_nombre ? `${mv.empleado_nombre}${mv.empleado_puesto ? " — " + mv.empleado_puesto : ""}` : "";
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${new Date(mv.creado_en).toLocaleString()}</td>
@@ -708,10 +789,12 @@ async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
       <td>${mv.cantidad}</td>
       <td>${mv.comentario || ""}</td>
       <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
+      <td>${emp || "-"}</td>
     `;
     tbody.appendChild(tr);
-  });
+  }
 }
+
 
 async function refrescarMovimientosProyecto() {
   if (!proyectoSeleccionadoId) return;
@@ -737,11 +820,15 @@ document.getElementById("form-salida-proyecto")?.addEventListener("submit", asyn
   const form = e.target;
   if (!form.material_id.value) return alert("Selecciona un material (limpia búsqueda si no aparece).");
 
+  const empSel = document.getElementById("empleado_select");
+  const empId = empSel && empSel.value ? Number(empSel.value) : null;
+
   const payload = {
     material_id: parseInt(form.material_id.value),
     cantidad: parseFloat(form.cantidad.value),
     comentario: form.comentario.value.trim() || null,
-    etapa_id: etapaActivaId
+    etapa_id: etapaActivaId,
+    entregado_a_empleado_id: empId
   };
 
   const res = await apiFetch(`${API_BASE}/movimientos/proyecto/${proyectoSeleccionadoId}/salida`, {
@@ -1250,21 +1337,58 @@ async function cargarMovimientosGlobal() {
 
   if (!data.ok) return alert(data.message || "Error al cargar movimientos globales");
 
-  (data.movimientos || []).forEach(mv => {
+  const lista = data.movimientos || [];
+  // orden asc para agrupar
+  lista.sort((a,b) => new Date(a.creado_en) - new Date(b.creado_en));
+
+  let lastDate = null;
+  const dayKey = (d) => {
+    const x = new Date(d);
+    return `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
+  };
+  const daysDiff = (a,b) => {
+    const da = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+    const db = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+    return Math.round((da - db) / (1000*60*60*24));
+  };
+
+  for (const mv of lista) {
+    const dt = new Date(mv.creado_en);
+
+    if (!lastDate || dayKey(dt) !== dayKey(lastDate)) {
+      if (lastDate) {
+        const diff = Math.abs(daysDiff(lastDate, dt));
+        if (diff >= 2) {
+          const trGap = document.createElement("tr");
+          trGap.className = "tr-gap";
+          trGap.innerHTML = `<td colspan="9">⏳ Pasaron ${diff-1} día(s) sin movimientos</td>`;
+          tbody.appendChild(trGap);
+        }
+      }
+
+      const trSep = document.createElement("tr");
+      trSep.className = "tr-dia-sep";
+      trSep.innerHTML = `<td colspan="9">${dt.toLocaleDateString("es-MX", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}</td>`;
+      tbody.appendChild(trSep);
+      lastDate = dt;
+    }
+
+    const emp = mv.empleado_nombre ? `${mv.empleado_nombre}${mv.empleado_puesto ? " — " + mv.empleado_puesto : ""}` : "";
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
-  <td>${new Date(mv.creado_en).toLocaleString()}</td>
-  <td>${mv.material_nombre || mv.nombre || "-"}</td>
-  <td>${mv.proyecto_id ? `${mv.proyecto_clave || ""} - ${mv.proyecto_nombre || ""}`.trim() : "-"}</td>
-  <td>${mv.etapa_id || "-"}</td>
-  <td>${mv.tipo}</td>
-  <td>${mv.cantidad}</td>
-  <td>${mv.comentario || ""}</td>
-  <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
-`;
-
+      <td>${new Date(mv.creado_en).toLocaleString()}</td>
+      <td>${mv.material_nombre || mv.nombre || "-"}</td>
+      <td>${mv.proyecto_id ? `${mv.proyecto_clave || ""} - ${mv.proyecto_nombre || ""}`.trim() : "-"}</td>
+      <td>${mv.etapa_id || "-"}</td>
+      <td>${mv.tipo}</td>
+      <td>${mv.cantidad}</td>
+      <td>${mv.comentario || ""}</td>
+      <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
+      <td>${emp || "-"}</td>
+    `;
     tbody.appendChild(tr);
-  });
+  }
 }
 
 
@@ -1323,6 +1447,144 @@ document.getElementById("form-usuario")?.addEventListener("submit", async (e) =>
   form.reset();
   await cargarUsuarios();
 });
+
+/* ==================== EMPLEADOS ==================== */
+
+let empleadosCache = [];
+
+async function cargarEmpleados() {
+  if (!esAdmin()) return;
+
+  const q = document.getElementById("emp_buscar")?.value?.trim() || "";
+  const activoVal = document.getElementById("emp_filtro_activo")?.value || "1";
+
+  const params = new URLSearchParams();
+  if (activoVal === "1") params.set("activo", "1");
+  if (activoVal === "0") params.set("activo", "0");
+  // si es "all" no mandamos filtro
+  const url = `${API_BASE}/empleados${params.toString() ? "?" + params.toString() : ""}`;
+
+  const res = await apiFetch(url);
+  const data = await res.json().catch(() => ({}));
+
+  if (!data.empleados) {
+    // backend aún no montado o error
+    console.warn("No se pudieron cargar empleados:", data);
+    return;
+  }
+
+  empleadosCache = data.empleados;
+
+  // filtro por búsqueda en frontend
+  const lista = q
+    ? empleadosCache.filter(e =>
+        (e.nombre || "").toLowerCase().includes(q.toLowerCase()) ||
+        (e.puesto || "").toLowerCase().includes(q.toLowerCase()) ||
+        (e.telefono || "").toLowerCase().includes(q.toLowerCase())
+      )
+    : empleadosCache;
+
+  renderEmpleadosTabla(lista);
+  // también refresca selector de salida si existe
+  renderEmpleadosSelect(lista.filter(e => e.activo));
+}
+
+function renderEmpleadosTabla(lista) {
+  const tbody = document.querySelector("#tabla-empleados tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  lista.forEach(e => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${e.nombre || ""}</td>
+      <td>${e.puesto || ""}</td>
+      <td>${e.telefono || ""}</td>
+      <td>${e.activo ? "Activo" : "Inactivo"}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderEmpleadosSelect(lista) {
+  const sel = document.getElementById("empleado_select");
+  if (!sel) return;
+  sel.innerHTML = "";
+
+  (lista || []).forEach(e => {
+    const opt = document.createElement("option");
+    opt.value = e.id;
+    opt.textContent = `${e.nombre}${e.puesto ? " — " + e.puesto : ""}`;
+    sel.appendChild(opt);
+  });
+}
+
+async function prepararSelectorEmpleadosSalida() {
+  if (!esAdmin()) return;
+
+  // carga empleados si no están
+  if (!empleadosCache.length) {
+    const res = await apiFetch(`${API_BASE}/empleados?activo=1`);
+    const data = await res.json().catch(() => ({}));
+    empleadosCache = data.empleados || [];
+  }
+
+  renderEmpleadosSelect(empleadosCache.filter(e => e.activo));
+
+  const input = document.getElementById("empleado_buscar");
+  if (input) {
+    input.oninput = () => {
+      const q = input.value.trim().toLowerCase();
+      const filtrados = !q
+        ? empleadosCache.filter(e => e.activo)
+        : empleadosCache.filter(e =>
+            e.activo &&
+            (
+              (e.nombre || "").toLowerCase().includes(q) ||
+              (e.puesto || "").toLowerCase().includes(q) ||
+              (e.telefono || "").toLowerCase().includes(q)
+            )
+          );
+
+      renderEmpleadosSelect(filtrados);
+    };
+  }
+}
+
+function initEmpleadosUI() {
+  const form = document.getElementById("formEmpleado");
+  if (form) {
+    form.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      if (!esAdmin()) return alert("Solo admin puede registrar empleados.");
+
+      const nombre = document.getElementById("emp_nombre")?.value?.trim();
+      const puesto = document.getElementById("emp_puesto")?.value?.trim() || null;
+      const telefono = document.getElementById("emp_tel")?.value?.trim() || null;
+
+      if (!nombre) return alert("Nombre requerido");
+
+      const res = await apiFetch(`${API_BASE}/empleados`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre, puesto, telefono })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) return alert(data.error || data.message || "Error al guardar empleado");
+
+      form.reset();
+      await cargarEmpleados();
+      alert("Empleado registrado");
+    });
+  }
+
+  document.getElementById("btnRefrescarEmpleados")?.addEventListener("click", cargarEmpleados);
+  document.getElementById("emp_buscar")?.addEventListener("input", () => cargarEmpleados());
+  document.getElementById("emp_filtro_activo")?.addEventListener("change", () => cargarEmpleados());
+}
+
+
 /* ==================== PROVEEDORES ==================== */
 
 async function apiFetchAuth(url, options = {}) {
@@ -1523,7 +1785,13 @@ async function cargarProveedoresSelects() {
     if (secAdmin) secAdmin.style.display = "none";
     const secUsuarios = document.getElementById("usuarios");
     if (secUsuarios) secUsuarios.style.display = "none";
+
+    const secEmpleados = document.getElementById("empleados");
+    if (secEmpleados) secEmpleados.style.display = "none";
   }
+
+  // Empleados (solo admin)
+  initEmpleadosUI();
 })();
 (function initToggleArchivados(){
   const t = document.getElementById("toggle-ver-archivados");
