@@ -16,7 +16,6 @@ export async function listarMateriales(_req, res) {
          m.stock_actual, m.stock_minimo, m.ubicacion,
          m.activo, m.creado_en,
          m.proveedor_id,
-         p.nombre,
          p.nombre_comercial AS proveedor_nombre,
          m.ticket_numero, m.requiere_protocolo, m.protocolo_texto,
          m.precio_unitario,
