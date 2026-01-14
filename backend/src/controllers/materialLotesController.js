@@ -8,7 +8,7 @@ export async function listarLotesDeMaterial(req, res) {
     const [rows] = await pool.query(
       `SELECT
          l.id, l.material_id, l.lote_codigo,
-         l.proveedor_id, p.nombre AS proveedor_nombre,
+         l.proveedor_id, p.nombre_comercial AS proveedor_nombre,
          l.precio_unitario, l.ticket_numero,
          l.requiere_protocolo, l.protocolo_texto,
          l.cantidad_inicial, l.cantidad_disponible,
