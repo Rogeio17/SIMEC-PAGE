@@ -214,7 +214,7 @@ export async function registrarSalida(req, res) {
     if (!Number.isFinite(etapaId) || etapaId <= 0) {
       return res.status(400).json({ ok: false, message: "Debe indicar etapa_id" });
     }
-
+    
     await conn.beginTransaction();
 
     // Validar empleado (opcional)
