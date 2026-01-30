@@ -4,6 +4,9 @@ import { requireAuth, requireRole } from "../middlewares/auth.js";
 import {
   crearMaterial,
   listarMateriales,
+  listarCatalogoMateriales,
+  agregarTagMaterial,
+  quitarTagMaterial,
   actualizarMaterial,
   eliminarMaterial
 } from "../controllers/materialesController.js";
@@ -28,6 +31,13 @@ router.get("/export/pdf", requireRole("admin"), exportMaterialesPdf);
 
 
 router.get("/", listarMateriales);
+
+// Catálogo (con etiquetas)
+router.get("/catalogo", listarCatalogoMateriales);
+
+// Etiquetas por material
+router.post("/:id/tags", requireRole("admin"), agregarTagMaterial);
+router.delete("/:id/tags/:tagId", requireRole("admin"), quitarTagMaterial);
 
 
 router.post("/", requireRole("admin"), crearMaterial);

@@ -116,6 +116,7 @@ function mostrarSeccion(id) {
   if (id === "usuarios") cargarUsuarios();
   if (id === "empleados") cargarEmpleados();
   if (id === "proveedores") cargarProveedores();
+  if (id === "catalogo") cargarCatalogo();
   if (id === "materiales" || id === "admin-almacen") cargarProveedores?.();
 }
 
@@ -276,6 +277,277 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
 
   await cargarAdminMateriales(true);
 });
+
+
+/* ==================== CATÁLOGO (CARDS + ETIQUETAS + REPORTE) ==================== */
+
+let catalogoCache = [];
+let catalogoTagsDisponibles = []; // [{id,nombre}]
+let seleccionCatalogo = new Set();
+
+function getCatalogoFiltros() {
+  return {
+    search: (document.getElementById("catalogo-buscar")?.value || "").trim(),
+    tag: (document.getElementById("catalogo-filtro-tag")?.value || "").trim(),
+    proveedor_id: (document.getElementById("catalogo-filtro-proveedor")?.value || "").trim(),
+    stock: (document.getElementById("catalogo-filtro-stock")?.value || "").trim(),
+  };
+}
+
+function actualizarBotonReporteCatalogo() {
+  const btn = document.getElementById("btn-catalogo-reporte");
+  if (!btn) return;
+  const n = seleccionCatalogo.size;
+  btn.disabled = n === 0;
+  btn.innerHTML = `<span class="material-icons">description</span> Reporte (${n})`;
+}
+
+function renderCatalogo(lista) {
+  const grid = document.getElementById("catalogo-grid");
+  const info = document.getElementById("catalogo-info");
+  if (!grid) return;
+
+  if (info) {
+    info.textContent = `Mostrando ${lista.length} material(es). Seleccionados: ${seleccionCatalogo.size}.`;
+  }
+
+  grid.innerHTML = "";
+
+  if (!lista.length) {
+    grid.innerHTML = `<div class="small" style="padding:10px; color: var(--muted);">No hay materiales con esos filtros.</div>`;
+    return;
+  }
+
+  lista.forEach((m) => {
+    const tags = Array.isArray(m.tags) ? m.tags : [];
+    const isSel = seleccionCatalogo.has(m.id);
+
+    const card = document.createElement("div");
+    card.className = "mat-card";
+    card.innerHTML = `
+      <div class="mat-card-top">
+        <div>
+          <div class="mat-code">${escapeHtml(m.codigo || "(SIN CÓDIGO)")}</div>
+          <div class="mat-name">${escapeHtml(m.nombre || "")}</div>
+        </div>
+
+        <div class="mat-stock">
+          <div class="num">${escapeHtml(m.stock_actual ?? 0)}</div>
+          <div class="lbl">Stock</div>
+        </div>
+      </div>
+
+      <div class="mat-meta">
+        <span><strong>Ubicación:</strong> ${escapeHtml(m.ubicacion || "-")}</span>
+        <span><strong>Proveedor:</strong> ${escapeHtml(m.proveedor_nombre || "-")}</span>
+      </div>
+
+      <div class="chips">
+        ${tags
+          .map((t) => {
+            const tRow = catalogoTagsDisponibles.find(x => String(x.nombre).toLowerCase() === String(t).toLowerCase());
+            const tid = tRow?.id ?? "";
+            return `<span class="chip" title="Quitar etiqueta">
+              ${escapeHtml(t)}
+              ${esAdmin() && tid ? `<button type="button" data-mid="${m.id}" data-tid="${tid}" class="btn-chip-del">✕</button>` : ""}
+            </span>`;
+          })
+          .join("")}
+        ${esAdmin() ? `<span class="chip chip-add"><button type="button" class="btn-chip-add" data-mid="${m.id}">+ Etiqueta</button></span>` : ""}
+      </div>
+
+      <div class="mat-actions">
+        <label>
+          <input type="checkbox" class="chk-cat" data-id="${m.id}" ${isSel ? "checked" : ""}/>
+          Seleccionar
+        </label>
+        <button class="btn-secondary" type="button" data-id="${m.id}" class="btn-ver" style="height:38px;">
+          <span class="material-icons">visibility</span>
+          Ver
+        </button>
+      </div>
+    `;
+
+    // Checkbox selección
+    card.querySelector(".chk-cat")?.addEventListener("change", (ev) => {
+      const id = Number(ev.target.dataset.id);
+      if (ev.target.checked) seleccionCatalogo.add(id);
+      else seleccionCatalogo.delete(id);
+      actualizarBotonReporteCatalogo();
+      if (info) info.textContent = `Mostrando ${lista.length} material(es). Seleccionados: ${seleccionCatalogo.size}.`;
+    });
+
+    // Ver detalle rápido (sin unidad)
+    card.querySelector("button[data-id]")?.addEventListener("click", () => {
+      const detalles = [
+        `Código: ${m.codigo || "(SIN CÓDIGO)"}`,
+        `Nombre: ${m.nombre || ""}`,
+        `Stock actual: ${m.stock_actual ?? 0}`,
+        `Stock mínimo: ${m.stock_minimo ?? 0}`,
+        `Ubicación: ${m.ubicacion || "-"}`,
+        `Proveedor: ${m.proveedor_nombre || "-"}`,
+        `Ticket/Factura: ${m.ticket_numero || "-"}`,
+        `Precio unitario: ${m.precio_unitario ?? "-"}`,
+        `Protocolo: ${m.requiere_protocolo ? (m.protocolo_texto || "Sí") : "No"}`,
+        `Etiquetas: ${(tags.length ? tags.join(", ") : "-")}`
+      ].join("\n");
+      alert(detalles);
+    });
+
+    // Agregar etiqueta
+    card.querySelector(".btn-chip-add")?.addEventListener("click", async (ev) => {
+      if (!esAdmin()) return alert("Solo admin puede crear etiquetas.");
+      const mid = Number(ev.currentTarget.dataset.mid);
+      const tag = prompt("Escribe la etiqueta (ej: eléctrico, consumible, alto valor):");
+      if (!tag || !tag.trim()) return;
+      const res = await apiFetch(`${API_BASE}/materiales/${mid}/tags`, {
+        method: "POST",
+        body: JSON.stringify({ tag: tag.trim() })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) return alert(data.message || "Error al agregar etiqueta");
+      await cargarCatalogo();
+    });
+
+    // Quitar etiqueta
+    card.querySelectorAll(".btn-chip-del").forEach((btnDel) => {
+      btnDel.addEventListener("click", async (ev) => {
+        if (!esAdmin()) return;
+        const mid = Number(ev.currentTarget.dataset.mid);
+        const tid = Number(ev.currentTarget.dataset.tid);
+        const res = await apiFetch(`${API_BASE}/materiales/${mid}/tags/${tid}`, { method: "DELETE" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) return alert(data.message || "Error al quitar etiqueta");
+        await cargarCatalogo();
+      });
+    });
+
+    grid.appendChild(card);
+  });
+
+  actualizarBotonReporteCatalogo();
+}
+
+function poblarSelectCatalogoTags(tags) {
+  const sel = document.getElementById("catalogo-filtro-tag");
+  if (!sel) return;
+  const actual = sel.value;
+  sel.innerHTML = `<option value="">Todas</option>`;
+  (tags || []).forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t.nombre;
+    opt.textContent = t.nombre;
+    sel.appendChild(opt);
+  });
+  if ([...sel.options].some(o => o.value === actual)) sel.value = actual;
+}
+
+async function poblarSelectCatalogoProveedores() {
+  const sel = document.getElementById("catalogo-filtro-proveedor");
+  if (!sel) return;
+  const actual = sel.value;
+
+  const res = await apiFetch(`${API_BASE}/proveedores?activo=1`);
+  const data = await res.json().catch(() => ({}));
+
+  sel.innerHTML = `<option value="">Todos</option>`;
+  (data.proveedores || []).forEach(p => {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = p.nombre_comercial || p.nombre || "(Sin nombre)";
+    sel.appendChild(opt);
+  });
+
+  if ([...sel.options].some(o => o.value === actual)) sel.value = actual;
+}
+
+async function cargarCatalogo() {
+  const f = getCatalogoFiltros();
+  const params = new URLSearchParams();
+  if (f.search) params.set("search", f.search);
+  if (f.tag) params.set("tag", f.tag);
+  if (f.proveedor_id) params.set("proveedor_id", f.proveedor_id);
+  if (f.stock) params.set("stock", f.stock);
+
+  const res = await apiFetch(`${API_BASE}/materiales/catalogo?${params.toString()}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) {
+    alert(data.message || "Error al cargar catálogo");
+    return;
+  }
+
+  catalogoCache = data.materiales || [];
+  catalogoTagsDisponibles = data.tags || [];
+
+  poblarSelectCatalogoTags(catalogoTagsDisponibles);
+  await poblarSelectCatalogoProveedores();
+
+  // Mantener selección aunque recargue
+  const idsDisponibles = new Set(catalogoCache.map(m => m.id));
+  seleccionCatalogo = new Set([...seleccionCatalogo].filter(id => idsDisponibles.has(id)));
+
+  renderCatalogo(catalogoCache);
+}
+
+function descargarCSV(nombre, filas) {
+  const csv = filas
+    .map(r => r.map(v => `"${String(v ?? "").replaceAll('"', '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function generarReporteCatalogo() {
+  const ids = [...seleccionCatalogo];
+  const seleccionados = catalogoCache.filter(m => ids.includes(m.id));
+  if (!seleccionados.length) return;
+
+  const filas = [
+    ["CODIGO", "NOMBRE", "STOCK_ACTUAL", "STOCK_MINIMO", "UBICACION", "PROVEEDOR", "TICKET", "PRECIO_UNITARIO", "PROTOCOLO", "ETIQUETAS"],
+    ...seleccionados.map(m => [
+      m.codigo || "",
+      m.nombre || "",
+      m.stock_actual ?? 0,
+      m.stock_minimo ?? 0,
+      m.ubicacion || "",
+      m.proveedor_nombre || "",
+      m.ticket_numero || "",
+      m.precio_unitario ?? "",
+      m.requiere_protocolo ? (m.protocolo_texto || "Sí") : "No",
+      (Array.isArray(m.tags) && m.tags.length) ? m.tags.join(" | ") : ""
+    ])
+  ];
+
+  const hoy = new Date();
+  const y = hoy.getFullYear();
+  const m = String(hoy.getMonth() + 1).padStart(2, "0");
+  const d = String(hoy.getDate()).padStart(2, "0");
+  descargarCSV(`reporte_existencias_${y}-${m}-${d}.csv`, filas);
+}
+
+// Listeners catálogo
+document.getElementById("catalogo-buscar")?.addEventListener("input", () => {
+  clearTimeout(window.__catTimer);
+  window.__catTimer = setTimeout(cargarCatalogo, 250);
+});
+document.getElementById("catalogo-filtro-tag")?.addEventListener("change", cargarCatalogo);
+document.getElementById("catalogo-filtro-proveedor")?.addEventListener("change", cargarCatalogo);
+document.getElementById("catalogo-filtro-stock")?.addEventListener("change", cargarCatalogo);
+
+document.getElementById("btn-catalogo-limpiar")?.addEventListener("click", () => {
+  seleccionCatalogo.clear();
+  actualizarBotonReporteCatalogo();
+  renderCatalogo(catalogoCache);
+});
+
+document.getElementById("btn-catalogo-reporte")?.addEventListener("click", generarReporteCatalogo);
 
 
 /* ==================== PROYECTOS ==================== */

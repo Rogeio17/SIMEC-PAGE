@@ -53,6 +53,12 @@
         <button class="nav-btn" data-section="empleados" id="btn-nav-empleados" style="display:none;">
           <span class="material-icons">people</span>
           Empleados
+        </button>
+
+        <button class="nav-btn" data-section="catalogo">
+          <span class="material-icons">storefront</span>
+          Catálogo
+        </button>
 
         <button class="nav-btn" data-section="proveedores">
           <span class="material-icons">local_shipping</span>
@@ -223,6 +229,69 @@
       </div>
     </div>
 
+  </div>
+</section>
+
+
+<!-- =============================
+     SECCIÓN: CATÁLOGO
+     ============================= -->
+<section id="catalogo" class="seccion">
+  <div class="section-title">
+    <h3>Catálogo de materiales</h3>
+    <p>Busca, etiqueta y selecciona materiales para sacar un reporte de existencias.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header" style="align-items:flex-start;">
+      <div>
+        <h4>Catálogo</h4>
+        <p class="small" style="margin:4px 0 0;">Tip: puedes buscar por código, nombre, proveedor, ubicación o etiqueta.</p>
+      </div>
+
+      <div class="catalog-actions">
+        <button class="btn-secondary" type="button" id="btn-catalogo-limpiar">Limpiar selección</button>
+        <button class="btn-primary" type="button" id="btn-catalogo-reporte" disabled>
+          <span class="material-icons">description</span>
+          Reporte (0)
+        </button>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <div class="catalog-toolbar">
+        <div class="form-group" style="min-width:260px; flex: 1;">
+          <label>Buscar</label>
+          <input type="text" id="catalogo-buscar" placeholder="Ej. cable, MAT-001, proveedor, A1, eléctrico..." />
+        </div>
+
+        <div class="form-group" style="min-width:220px;">
+          <label>Etiqueta</label>
+          <select id="catalogo-filtro-tag">
+            <option value="">Todas</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="min-width:220px;">
+          <label>Proveedor</label>
+          <select id="catalogo-filtro-proveedor">
+            <option value="">Todos</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="min-width:200px;">
+          <label>Stock</label>
+          <select id="catalogo-filtro-stock">
+            <option value="">Todos</option>
+            <option value="con">Con stock</option>
+            <option value="sin">Sin stock</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="catalogo-info" class="small" style="margin: 8px 0 10px;"></div>
+      <div id="catalogo-grid" class="catalog-grid"></div>
+    </div>
   </div>
 </section>
 

@@ -40,6 +40,152 @@ export async function listarMateriales(_req, res) {
   }
 }
 
+/* ==================== CATÁLOGO + ETIQUETAS ==================== */
+
+export async function listarCatalogoMateriales(req, res) {
+  try {
+    const search = String(req.query.search || "").trim().toLowerCase();
+    const tag = String(req.query.tag || "").trim().toLowerCase();
+    const proveedorId = req.query.proveedor_id ? Number(req.query.proveedor_id) : null;
+    const stock = String(req.query.stock || "").trim().toLowerCase(); // con|sin|""
+
+    const where = ["m.activo = 1"];
+    const params = [];
+
+    if (proveedorId && Number.isFinite(proveedorId)) {
+      where.push("m.proveedor_id = ?");
+      params.push(proveedorId);
+    }
+
+    if (stock === "con") where.push("m.stock_actual > 0");
+    if (stock === "sin") where.push("(m.stock_actual IS NULL OR m.stock_actual <= 0)");
+
+    if (search) {
+      where.push(
+        "(LOWER(COALESCE(m.codigo,'')) LIKE ? OR LOWER(m.nombre) LIKE ? OR LOWER(COALESCE(m.ubicacion,'')) LIKE ? OR LOWER(COALESCE(p.nombre_comercial,'')) LIKE ? OR LOWER(COALESCE(tg.tags,'')) LIKE ?)"
+      );
+      const like = `%${search}%`;
+      params.push(like, like, like, like, like);
+    }
+
+    if (tag) {
+      where.push("LOWER(COALESCE(tg.tags,'')) LIKE ?");
+      params.push(`%${tag}%`);
+    }
+
+    const [rows] = await pool.query(
+      `SELECT
+         m.id, m.codigo, m.nombre,
+         m.stock_actual, m.stock_minimo, m.ubicacion,
+         m.proveedor_id,
+         p.nombre_comercial AS proveedor_nombre,
+         m.ticket_numero,
+         m.requiere_protocolo, m.protocolo_texto,
+         m.precio_unitario,
+         COALESCE(tg.tags, '') AS tags
+       FROM materiales m
+       LEFT JOIN proveedores p ON p.id = m.proveedor_id
+       LEFT JOIN (
+         SELECT mt.material_id, GROUP_CONCAT(t.nombre ORDER BY t.nombre SEPARATOR ',') AS tags
+         FROM material_tags mt
+         JOIN tags t ON t.id = mt.tag_id
+         GROUP BY mt.material_id
+       ) tg ON tg.material_id = m.id
+       WHERE ${where.join(" AND ")}
+       ORDER BY m.id DESC`,
+      params
+    );
+
+    const materiales = rows.map(r => ({
+      ...r,
+      tags: String(r.tags || "")
+        .split(",")
+        .map(x => x.trim())
+        .filter(Boolean)
+    }));
+
+    // Para poblar el filtro de etiquetas sin otro endpoint
+    const [tagRows] = await pool.query("SELECT id, nombre FROM tags ORDER BY nombre ASC");
+
+    res.json({ ok: true, materiales, tags: tagRows });
+  } catch (err) {
+    console.error("❌ listarCatalogoMateriales:", err);
+    res.status(500).json({ ok: false, message: "Error al obtener catálogo" });
+  }
+}
+
+export async function agregarTagMaterial(req, res) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const materialId = Number(req.params.id);
+    const tag = String(req.body?.tag || "").trim();
+
+    if (!Number.isFinite(materialId)) {
+      await conn.rollback();
+      return res.status(400).json({ ok: false, message: "ID inválido" });
+    }
+
+    if (!tag) {
+      await conn.rollback();
+      return res.status(400).json({ ok: false, message: "Etiqueta requerida" });
+    }
+
+    // Validar material
+    const [mat] = await conn.query("SELECT id FROM materiales WHERE id = ? AND activo = 1 LIMIT 1", [materialId]);
+    if (!mat.length) {
+      await conn.rollback();
+      return res.status(404).json({ ok: false, message: "Material no encontrado" });
+    }
+
+    // Crear etiqueta si no existe
+    let tagId;
+    const [t] = await conn.query("SELECT id FROM tags WHERE LOWER(nombre) = LOWER(?) LIMIT 1", [tag]);
+    if (t.length) {
+      tagId = t[0].id;
+    } else {
+      const [ins] = await conn.query("INSERT INTO tags (nombre) VALUES (?)", [tag]);
+      tagId = ins.insertId;
+    }
+
+    // Relación (ignorar duplicados)
+    await conn.query(
+      "INSERT IGNORE INTO material_tags (material_id, tag_id) VALUES (?, ?)",
+      [materialId, tagId]
+    );
+
+    await conn.commit();
+    res.json({ ok: true, message: "Etiqueta agregada" });
+  } catch (err) {
+    try { await conn.rollback(); } catch {}
+    console.error("❌ agregarTagMaterial:", err);
+    res.status(500).json({ ok: false, message: "Error al agregar etiqueta" });
+  } finally {
+    conn.release();
+  }
+}
+
+export async function quitarTagMaterial(req, res) {
+  try {
+    const materialId = Number(req.params.id);
+    const tagId = Number(req.params.tagId);
+    if (!Number.isFinite(materialId) || !Number.isFinite(tagId)) {
+      return res.status(400).json({ ok: false, message: "Parámetros inválidos" });
+    }
+
+    await pool.query(
+      "DELETE FROM material_tags WHERE material_id = ? AND tag_id = ?",
+      [materialId, tagId]
+    );
+
+    res.json({ ok: true, message: "Etiqueta eliminada" });
+  } catch (err) {
+    console.error("❌ quitarTagMaterial:", err);
+    res.status(500).json({ ok: false, message: "Error al quitar etiqueta" });
+  }
+}
+
 export async function crearMaterial(req, res) {
   const conn = await pool.getConnection();
   try {
