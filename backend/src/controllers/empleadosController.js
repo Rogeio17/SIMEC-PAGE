@@ -2,7 +2,7 @@ import pool from "../config/db.js";
 
 /* ==================== EMPLEADOS (CRUD BÁSICO) ==================== */
 
-// Listar empleados (por defecto solo activos si ?activo=1)
+
 export async function listarEmpleados(req, res) {
   try {
     const { activo } = req.query;
@@ -20,7 +20,7 @@ export async function listarEmpleados(req, res) {
   }
 }
 
-// Crear empleado
+
 export async function crearEmpleado(req, res) {
   try {
     const { nombre, puesto = null, telefono = null } = req.body;
@@ -46,7 +46,7 @@ export async function crearEmpleado(req, res) {
   }
 }
 
-// Actualizar empleado (nombre/puesto/telefono/activo)
+
 export async function actualizarEmpleado(req, res) {
   try {
     const id = Number(req.params.id);
@@ -63,7 +63,6 @@ export async function actualizarEmpleado(req, res) {
     const act = activo !== undefined ? Number(activo) : undefined;
     const activoVal = act === 1 ? 1 : act === 0 ? 0 : undefined;
 
-    // construir update dinámico
     const sets = [];
     const vals = [];
 

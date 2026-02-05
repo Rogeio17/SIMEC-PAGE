@@ -32,10 +32,8 @@ router.get("/export/pdf", requireRole("admin"), exportMaterialesPdf);
 
 router.get("/", listarMateriales);
 
-// Catálogo (con etiquetas)
 router.get("/catalogo", listarCatalogoMateriales);
 
-// Etiquetas por material
 router.post("/:id/tags", requireRole("admin"), agregarTagMaterial);
 router.delete("/:id/tags/:tagId", requireRole("admin"), quitarTagMaterial);
 

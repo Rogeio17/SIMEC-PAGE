@@ -1,6 +1,5 @@
 import pool from "../config/db.js";
 
-// Unidades permitidas para materiales. Si llega algo distinto, se normaliza a "pza".
 const UNIDADES_VALIDAS = new Set(["pza", "m", "kg", "lt"]);
 
 function normalizarUnidad(u) {
@@ -47,7 +46,7 @@ export async function listarCatalogoMateriales(req, res) {
     const search = String(req.query.search || "").trim().toLowerCase();
     const tag = String(req.query.tag || "").trim().toLowerCase();
     const proveedorId = req.query.proveedor_id ? Number(req.query.proveedor_id) : null;
-    const stock = String(req.query.stock || "").trim().toLowerCase(); // con|sin|""
+    const stock = String(req.query.stock || "").trim().toLowerCase(); 
 
     const where = ["m.activo = 1"];
     const params = [];
@@ -104,7 +103,6 @@ export async function listarCatalogoMateriales(req, res) {
         .filter(Boolean)
     }));
 
-    // Para poblar el filtro de etiquetas sin otro endpoint
     const [tagRows] = await pool.query("SELECT id, nombre FROM tags ORDER BY nombre ASC");
 
     res.json({ ok: true, materiales, tags: tagRows });
@@ -132,14 +130,12 @@ export async function agregarTagMaterial(req, res) {
       return res.status(400).json({ ok: false, message: "Etiqueta requerida" });
     }
 
-    // Validar material
     const [mat] = await conn.query("SELECT id FROM materiales WHERE id = ? AND activo = 1 LIMIT 1", [materialId]);
     if (!mat.length) {
       await conn.rollback();
       return res.status(404).json({ ok: false, message: "Material no encontrado" });
     }
-
-    // Crear etiqueta si no existe
+    
     let tagId;
     const [t] = await conn.query("SELECT id FROM tags WHERE LOWER(nombre) = LOWER(?) LIMIT 1", [tag]);
     if (t.length) {
@@ -149,7 +145,6 @@ export async function agregarTagMaterial(req, res) {
       tagId = ins.insertId;
     }
 
-    // Relación (ignorar duplicados)
     await conn.query(
       "INSERT IGNORE INTO material_tags (material_id, tag_id) VALUES (?, ?)",
       [materialId, tagId]

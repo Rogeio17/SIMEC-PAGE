@@ -5,7 +5,7 @@ export async function ajustarLote(req, res) {
   const { loteId } = req.params;
   const { tipo, cantidad, comentario } = req.body;
 
-  const userId = req.user?.id || null; // depende de tu middleware auth
+  const userId = req.user?.id || null; 
   const qty = Number(cantidad);
 
   if (!["sumar", "restar"].includes(tipo)) {

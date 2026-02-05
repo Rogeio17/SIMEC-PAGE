@@ -60,7 +60,6 @@ export async function registrarSalidaGeneral(req, res) {
 
     await conn.beginTransaction();
 
-    // Validar empleado (opcional)
     if (empId) {
       const [emp] = await conn.query(`SELECT id FROM empleados WHERE id = ? AND activo = 1 LIMIT 1`, [empId]);
       if (!emp.length) {
@@ -217,7 +216,6 @@ export async function registrarSalida(req, res) {
 
     await conn.beginTransaction();
 
-    // Validar empleado (opcional)
     if (empId) {
       const [emp] = await conn.query(`SELECT id FROM empleados WHERE id = ? AND activo = 1 LIMIT 1`, [empId]);
       if (!emp.length) {
