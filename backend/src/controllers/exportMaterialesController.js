@@ -128,7 +128,7 @@ export async function exportMaterialesExcel(_req, res) {
          m.stock_actual,
          m.stock_minimo,
          m.ubicacion,
-         p.nombre AS proveedor_nombre,
+         m.nombre AS proveedor_nombre,
          m.ticket_numero,
          m.requiere_protocolo,
          m.protocolo_texto,
