@@ -562,3 +562,81 @@ grid-template-columns:1fr;
 }
 
 }
+/* ======================
+   MEJORAS VISUALES PRO
+====================== */
+
+/* Colores SIMEC */
+:root{
+--primary:#b31217;
+--primary-dark:#8f0f13;
+}
+
+/* Sidebar más elegante */
+
+.sidebar{
+background:#ffffff;
+}
+
+.logo{
+background:rgba(179,18,23,0.05);
+border:1px solid rgba(179,18,23,0.2);
+}
+
+.nav-btn.activa{
+background:var(--primary);
+border-color:var(--primary);
+}
+
+/* Botones arreglados */
+
+button{
+height:38px;
+padding:0 12px;
+border-radius:10px;
+white-space:nowrap;
+}
+
+/* Catalogo más compacto */
+
+.catalog-grid{
+grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+gap:12px;
+}
+
+.catalog-card{
+padding:14px;
+border-radius:12px;
+}
+
+.catalog-card:hover{
+border-color:var(--primary);
+}
+
+/* Acciones catalogo */
+
+.catalog-actions{
+gap:6px;
+}
+
+/* Semáforo más visible */
+
+.stock-indicator{
+font-weight:700;
+}
+
+/* Tarjetas */
+
+.card{
+border-radius:14px;
+}
+
+/* Formularios */
+
+.form{
+gap:10px;
+}
+
+.form-group{
+gap:4px;
+}
