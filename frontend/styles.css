@@ -3,7 +3,6 @@ TEMA SIMEC
 ========================= */
 
 :root{
-
 --primary:#b31217;
 --primary-dark:#8f0f13;
 
@@ -53,31 +52,23 @@ SIDEBAR
 ========================= */
 
 .sidebar{
-
 width:260px;
 background:white;
 border-right:1px solid var(--border);
-
 display:flex;
 flex-direction:column;
-
 padding:16px;
 gap:16px;
-
 }
 
 .logo{
-
 display:flex;
 align-items:center;
 gap:10px;
-
 padding:10px;
 border-radius:12px;
-
 background:#fff;
 border:1px solid var(--border);
-
 }
 
 .logo img{
@@ -105,32 +96,26 @@ gap:6px;
 }
 
 .nav-btn{
-
 height:38px;
 padding:0 12px;
-
 border-radius:10px;
 border:1px solid transparent;
-
 display:flex;
 align-items:center;
 gap:8px;
-
 background:transparent;
 cursor:pointer;
-
 color:var(--muted);
 font-size:14px;
-
 transition:.15s;
-
 }
 
 .nav-btn:hover{
 background:#f6f6f6;
 }
 
-.nav-btn.activa{
+.nav-btn.activa,
+.nav-btn.active{
 background:var(--primary);
 color:white;
 }
@@ -140,12 +125,9 @@ MAIN
 ========================= */
 
 .main{
-
 flex:1;
 padding:20px;
-
-overflow:auto;
-
+overflow-y:auto;
 }
 
 /* =========================
@@ -153,29 +135,21 @@ TARJETAS
 ========================= */
 
 .card{
-
 background:white;
 border-radius:12px;
 border:1px solid var(--border);
-
 box-shadow:var(--shadow);
-
 margin-bottom:16px;
-
 }
 
 .card-header{
-
 padding:14px;
 border-bottom:1px solid var(--border);
 font-weight:700;
-
 }
 
 .card-body{
-
 padding:14px;
-
 }
 
 /* =========================
@@ -183,21 +157,14 @@ BOTONES
 ========================= */
 
 button{
-
-height:38px;
-padding:0 14px;
-
+height:36px;
+padding:0 12px;
 border-radius:10px;
 border:1px solid var(--border);
-
 background:white;
-
 cursor:pointer;
-
 font-weight:500;
-
 white-space:nowrap;
-
 }
 
 button:hover{
@@ -226,38 +193,29 @@ FORMULARIOS
 ========================= */
 
 .form{
-
 display:flex;
 flex-direction:column;
 gap:10px;
-
 }
 
 .form-inline{
-
 display:flex;
 flex-wrap:wrap;
 gap:10px;
-
 }
 
 .form-group{
-
 display:flex;
 flex-direction:column;
 gap:4px;
 min-width:160px;
-
 }
 
 input,select,textarea{
-
 height:38px;
 padding:6px 8px;
-
 border-radius:8px;
 border:1px solid var(--border);
-
 }
 
 /* =========================
@@ -265,11 +223,9 @@ GRID
 ========================= */
 
 .grid-2{
-
 display:grid;
 grid-template-columns:1fr 1fr;
 gap:16px;
-
 }
 
 /* =========================
@@ -277,64 +233,47 @@ CATALOGO
 ========================= */
 
 .catalog-grid{
-
 display:grid;
 grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
 gap:14px;
-
 }
 
 .catalog-card{
-
 background:white;
 border:1px solid var(--border);
 border-radius:10px;
-
 padding:14px;
-
 display:flex;
 flex-direction:column;
 gap:8px;
-
 transition:.2s;
-
 }
 
 .catalog-card:hover{
-
 border-color:var(--primary);
 box-shadow:var(--shadow-hover);
-
 }
 
 .catalog-card-header{
-
 display:flex;
 justify-content:space-between;
 align-items:center;
-
 }
 
 .catalog-codigo{
-
 font-size:12px;
 font-weight:700;
 color:var(--muted);
-
 }
 
 .catalog-nombre{
-
 font-size:15px;
 font-weight:600;
-
 }
 
 .catalog-stock{
-
 font-size:13px;
 font-weight:600;
-
 }
 
 /* =========================
@@ -342,22 +281,17 @@ SEMAFORO
 ========================= */
 
 .stock-indicator{
-
 display:flex;
 align-items:center;
 gap:6px;
-
 font-size:12px;
 font-weight:700;
-
 }
 
 .stock-indicator .dot{
-
 width:10px;
 height:10px;
 border-radius:50%;
-
 }
 
 .stock-indicator.green .dot{
@@ -377,26 +311,20 @@ TABLAS
 ========================= */
 
 .table{
-
 width:100%;
 border-collapse:collapse;
-
 }
 
 .table th,
 .table td{
-
 padding:10px;
 border-bottom:1px solid var(--border);
 font-size:13px;
-
 }
 
 .table th{
-
 background:var(--surface-2);
 text-align:left;
-
 }
 
 /* =========================
@@ -404,9 +332,22 @@ SCROLL TABLAS
 ========================= */
 
 .table-wrapper{
-
+width:100%;
 overflow:auto;
+max-height:60vh;
+}
 
+/* =========================
+SECCIONES
+========================= */
+
+.seccion{
+display:none;
+width:100%;
+}
+
+.seccion.activa{
+display:block;
 }
 
 /* =========================
@@ -420,11 +361,9 @@ flex-direction:column;
 }
 
 .sidebar{
-
 width:100%;
 flex-direction:row;
 overflow:auto;
-
 }
 
 .nav{
