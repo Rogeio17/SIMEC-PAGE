@@ -283,8 +283,8 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
 
 /* ==================== CATÁLOGO (CARDS + ETIQUETAS + REPORTE) ==================== */
 
-let catalogoCache = [];
-let catalogoTagsDisponibles = []; // [{id,nombre}]
+let catalogoCache = []; 
+let catalogoTagsDisponibles = []; 
 let seleccionCatalogo = new Set();
 
 function getCatalogoFiltros() {
@@ -322,71 +322,132 @@ function renderCatalogo(lista) {
   grid.innerHTML = "";
 
   if (!lista.length) {
-    grid.innerHTML = `<div class="small" style="padding:10px; color: var(--muted);">No hay materiales con esos filtros.</div>`;
+    grid.innerHTML = `<div class="small" style="padding:10px;color:var(--muted);">No hay materiales con esos filtros.</div>`;
     return;
   }
 
   lista.forEach((m) => {
+
     const tags = Array.isArray(m.tags) ? m.tags : [];
     const isSel = seleccionCatalogo.has(m.id);
 
+    const stock = Number(m.stock_actual ?? 0);
+    const min = Number(m.stock_minimo ?? 0);
+
+    let color = "green";
+    let estado = "Stock OK";
+
+    if (stock === 0) {
+      color = "red";
+      estado = "Sin stock";
+    } else if (stock <= min) {
+      color = "orange";
+      estado = "Stock bajo";
+    }
+
     const card = document.createElement("div");
-    card.className = "mat-card";
+    card.className = "catalog-card";
+
     card.innerHTML = `
-      <div class="mat-card-top">
+    
+    <div class="catalog-card-header">
+
+        <div class="catalog-codigo">
+            ${escapeHtml(m.codigo || "(SIN CÓDIGO)")}
+        </div>
+
+        <div class="stock-indicator ${color}">
+            <span class="dot"></span>
+            ${estado}
+        </div>
+
+    </div>
+
+    <div class="catalog-nombre">
+        ${escapeHtml(m.nombre || "")}
+    </div>
+
+    <div class="catalog-stock">
+        Stock actual
+        <strong>${stock}</strong>
+    </div>
+
+    <div class="catalog-meta">
+
         <div>
-          <div class="mat-code">${escapeHtml(m.codigo || "(SIN CÓDIGO)")}</div>
-          <div class="mat-name">${escapeHtml(m.nombre || "")}</div>
+        <span class="material-icons">location_on</span>
+        ${escapeHtml(m.ubicacion || "-")}
         </div>
 
-        <div class="mat-stock">
-          <div class="num">${escapeHtml(m.stock_actual ?? 0)}</div>
-          <div class="lbl">Stock</div>
+        <div>
+        <span class="material-icons">local_shipping</span>
+        ${escapeHtml(m.proveedor_nombre || "-")}
         </div>
-      </div>
 
-      <div class="mat-meta">
-        <span><strong>Ubicación:</strong> ${escapeHtml(m.ubicacion || "-")}</span>
-        <span><strong>Proveedor:</strong> ${escapeHtml(m.proveedor_nombre || "-")}</span>
-      </div>
+    </div>
 
-      <div class="chips">
-        ${tags
-          .map((t) => {
-            const tRow = catalogoTagsDisponibles.find(x => String(x.nombre).toLowerCase() === String(t).toLowerCase());
-            const tid = tRow?.id ?? "";
-            return `<span class="chip" title="Quitar etiqueta">
-              ${escapeHtml(t)}
-              ${esAdmin() && tid ? `<button type="button" data-mid="${m.id}" data-tid="${tid}" class="btn-chip-del">✕</button>` : ""}
-            </span>`;
-          })
-          .join("")}
-        ${esAdmin() ? `<span class="chip chip-add"><button type="button" class="btn-chip-add" data-mid="${m.id}">+ Etiqueta</button></span>` : ""}
-      </div>
+    <div class="catalog-tags">
+      ${
+        tags.map((t)=>{
+          const tRow = catalogoTagsDisponibles.find(x => String(x.nombre).toLowerCase() === String(t).toLowerCase());
+          const tid = tRow?.id ?? "";
 
-      <div class="mat-actions">
+          return `
+          <span class="chip">
+            ${escapeHtml(t)}
+            ${
+              esAdmin() && tid
+              ? `<button data-mid="${m.id}" data-tid="${tid}" class="btn-chip-del">✕</button>`
+              : ""
+            }
+          </span>
+          `;
+        }).join("")
+      }
+
+      ${
+        esAdmin()
+        ? `<span class="chip chip-add">
+            <button class="btn-chip-add" data-mid="${m.id}">+ Etiqueta</button>
+          </span>`
+        : ""
+      }
+
+    </div>
+
+    <div class="catalog-actions">
+
         <label>
-          <input type="checkbox" class="chk-cat" data-id="${m.id}" ${isSel ? "checked" : ""}/>
-          Seleccionar
+            <input type="checkbox" class="chk-cat" data-id="${m.id}" ${isSel ? "checked":""}>
+            Seleccionar
         </label>
-        <button class="btn-secondary" type="button" data-id="${m.id}" class="btn-ver" style="height:38px;">
-          <span class="material-icons">visibility</span>
-          Ver
+
+        <button class="btn-secondary btn-ver" data-id="${m.id}">
+            <span class="material-icons">visibility</span>
+            Ver
         </button>
-      </div>
+
+    </div>
     `;
 
-    // Checkbox selección
-    card.querySelector(".chk-cat")?.addEventListener("change", (ev) => {
+
+    card.querySelector(".chk-cat")?.addEventListener("change",(ev)=>{
       const id = Number(ev.target.dataset.id);
-      if (ev.target.checked) seleccionCatalogo.add(id);
-      else seleccionCatalogo.delete(id);
+
+      if(ev.target.checked)
+        seleccionCatalogo.add(id);
+      else
+        seleccionCatalogo.delete(id);
+
       actualizarBotonReporteCatalogo();
-      if (info) info.textContent = `Mostrando ${lista.length} material(es). Seleccionados: ${seleccionCatalogo.size}.`;
+
+      if(info)
+        info.textContent = `Mostrando ${lista.length} material(es). Seleccionados: ${seleccionCatalogo.size}.`;
     });
 
-    // Ver detalle rápido (sin unidad)
-    card.querySelector("button[data-id]")?.addEventListener("click", () => {
+
+    card.querySelector(".btn-ver")?.addEventListener("click",()=>{
+
       const detalles = [
         `Código: ${m.codigo || "(SIN CÓDIGO)"}`,
         `Nombre: ${m.nombre || ""}`,
@@ -399,38 +460,63 @@ function renderCatalogo(lista) {
         `Protocolo: ${m.requiere_protocolo ? (m.protocolo_texto || "Sí") : "No"}`,
         `Etiquetas: ${(tags.length ? tags.join(", ") : "-")}`
       ].join("\n");
+
       alert(detalles);
+
     });
 
-    // Agregar etiqueta
+
     card.querySelector(".btn-chip-add")?.addEventListener("click", async (ev) => {
+
       if (!esAdmin()) return alert("Solo admin puede crear etiquetas.");
+
       const mid = Number(ev.currentTarget.dataset.mid);
-      const tag = prompt("Escribe la etiqueta (ej: eléctrico, consumible, alto valor):");
+
+      const tag = prompt("Escribe la etiqueta:");
+
       if (!tag || !tag.trim()) return;
-      const res = await apiFetch(`${API_BASE}/materiales/${mid}/tags`, {
-        method: "POST",
-        body: JSON.stringify({ tag: tag.trim() })
+
+      const res = await apiFetch(`${API_BASE}/materiales/${mid}/tags`,{
+        method:"POST",
+        body:JSON.stringify({tag:tag.trim()})
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) return alert(data.message || "Error al agregar etiqueta");
+
+      const data = await res.json().catch(()=>({}));
+
+      if(!res.ok || !data.ok)
+        return alert(data.message || "Error al agregar etiqueta");
+
       await cargarCatalogo();
+
     });
 
-    // Quitar etiqueta
-    card.querySelectorAll(".btn-chip-del").forEach((btnDel) => {
-      btnDel.addEventListener("click", async (ev) => {
-        if (!esAdmin()) return;
+
+    card.querySelectorAll(".btn-chip-del").forEach((btnDel)=>{
+
+      btnDel.addEventListener("click", async(ev)=>{
+
+        if(!esAdmin()) return;
+
         const mid = Number(ev.currentTarget.dataset.mid);
         const tid = Number(ev.currentTarget.dataset.tid);
-        const res = await apiFetch(`${API_BASE}/materiales/${mid}/tags/${tid}`, { method: "DELETE" });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.ok) return alert(data.message || "Error al quitar etiqueta");
+
+        const res = await apiFetch(`${API_BASE}/materiales/${mid}/tags/${tid}`,{
+          method:"DELETE"
+        });
+
+        const data = await res.json().catch(()=>({}));
+
+        if(!res.ok || !data.ok)
+          return alert(data.message || "Error al quitar etiqueta");
+
         await cargarCatalogo();
+
       });
+
     });
 
     grid.appendChild(card);
+
   });
 
   actualizarBotonReporteCatalogo();
@@ -490,7 +576,6 @@ async function cargarCatalogo() {
   poblarSelectCatalogoTags(catalogoTagsDisponibles);
   await poblarSelectCatalogoProveedores();
 
-  // Mantener selección aunque recargue
   const idsDisponibles = new Set(catalogoCache.map(m => m.id));
   seleccionCatalogo = new Set([...seleccionCatalogo].filter(id => idsDisponibles.has(id)));
 
@@ -648,7 +733,7 @@ function generarReporteCatalogoPDF() {
   w.focus();
 }
 
-// Listeners catálogo
+
 document.getElementById("catalogo-buscar")?.addEventListener("input", () => {
   clearTimeout(window.__catTimer);
   window.__catTimer = setTimeout(cargarCatalogo, 250);
