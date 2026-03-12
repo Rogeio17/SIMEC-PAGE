@@ -277,7 +277,7 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
 
   await cargarMaterialesEnSelectProyecto({ limpiarFiltro: true });
 
-  await cargarAdminMateriales(true);
+  await cargarAdminMateriales(true); 
 });
 
 
