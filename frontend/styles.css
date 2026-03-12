@@ -1,5 +1,5 @@
 /* =========================
-   VARIABLES (TEMA SIMEC)
+TEMA SIMEC
 ========================= */
 
 :root{
@@ -26,26 +26,30 @@
 --h:40px;
 }
 
-/* =========================
-   BASE
-========================= */
+*{
+box-sizing:border-box;
+}
 
-*{box-sizing:border-box;}
-
-body{
+html,body{
+height:100%;
 margin:0;
 font-family:var(--font);
 background:var(--bg);
 color:var(--text);
 }
 
+/* =========================
+LAYOUT
+========================= */
+
 .app{
 display:flex;
-min-height:100vh;
+height:100vh;
+overflow:hidden;
 }
 
 /* =========================
-   SIDEBAR
+SIDEBAR
 ========================= */
 
 .sidebar{
@@ -53,10 +57,11 @@ min-height:100vh;
 width:260px;
 background:white;
 border-right:1px solid var(--border);
-padding:16px;
 
 display:flex;
 flex-direction:column;
+
+padding:16px;
 gap:16px;
 
 }
@@ -66,49 +71,44 @@ gap:16px;
 display:flex;
 align-items:center;
 gap:10px;
+
 padding:10px;
 border-radius:12px;
+
 background:#fff;
 border:1px solid var(--border);
 
 }
 
-.logo-img{
-
-width:46px;
-height:46px;
+.logo img{
+width:42px;
+height:42px;
 object-fit:contain;
-
 }
 
 .logo-text h1{
-
 margin:0;
 font-size:18px;
 font-weight:800;
-
 }
 
 .logo-text p{
-
 margin:0;
 font-size:12px;
 color:var(--muted);
-
 }
 
 .nav{
-
 display:flex;
 flex-direction:column;
 gap:6px;
-
 }
 
 .nav-btn{
 
 height:38px;
 padding:0 12px;
+
 border-radius:10px;
 border:1px solid transparent;
 
@@ -127,20 +127,16 @@ transition:.15s;
 }
 
 .nav-btn:hover{
-
 background:#f6f6f6;
-
 }
 
 .nav-btn.activa{
-
 background:var(--primary);
 color:white;
-
 }
 
 /* =========================
-   MAIN
+MAIN
 ========================= */
 
 .main{
@@ -148,26 +144,12 @@ color:white;
 flex:1;
 padding:20px;
 
-}
-
-.main-header{
-
-display:flex;
-justify-content:space-between;
-align-items:center;
-margin-bottom:16px;
-
-}
-
-.main-header h2{
-
-margin:0;
-font-size:24px;
+overflow:auto;
 
 }
 
 /* =========================
-   TARJETAS
+TARJETAS
 ========================= */
 
 .card{
@@ -175,7 +157,9 @@ font-size:24px;
 background:white;
 border-radius:12px;
 border:1px solid var(--border);
+
 box-shadow:var(--shadow);
+
 margin-bottom:16px;
 
 }
@@ -195,7 +179,7 @@ padding:14px;
 }
 
 /* =========================
-   BOTONES
+BOTONES
 ========================= */
 
 button{
@@ -217,36 +201,28 @@ white-space:nowrap;
 }
 
 button:hover{
-
 border-color:var(--primary);
 color:var(--primary);
-
 }
 
 button.primary{
-
 background:var(--primary);
 border:none;
 color:white;
-
 }
 
 button.primary:hover{
-
 background:var(--primary-dark);
-
 }
 
 .btn-danger{
-
 background:#dc2626;
 border:none;
 color:white;
-
 }
 
 /* =========================
-   FORMULARIOS
+FORMULARIOS
 ========================= */
 
 .form{
@@ -285,7 +261,7 @@ border:1px solid var(--border);
 }
 
 /* =========================
-   GRID
+GRID
 ========================= */
 
 .grid-2{
@@ -297,7 +273,7 @@ gap:16px;
 }
 
 /* =========================
-   CATALOGO
+CATALOGO
 ========================= */
 
 .catalog-grid{
@@ -307,10 +283,6 @@ grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
 gap:14px;
 
 }
-
-/* =========================
-   TARJETA MATERIAL
-========================= */
 
 .catalog-card{
 
@@ -335,8 +307,6 @@ box-shadow:var(--shadow-hover);
 
 }
 
-/* HEADER */
-
 .catalog-card-header{
 
 display:flex;
@@ -360,8 +330,6 @@ font-weight:600;
 
 }
 
-/* STOCK */
-
 .catalog-stock{
 
 font-size:13px;
@@ -370,7 +338,7 @@ font-weight:600;
 }
 
 /* =========================
-   SEMAFORO STOCK
+SEMAFORO
 ========================= */
 
 .stock-indicator{
@@ -393,95 +361,19 @@ border-radius:50%;
 }
 
 .stock-indicator.green .dot{
-
 background:#16a34a;
-
 }
 
 .stock-indicator.orange .dot{
-
 background:#f59e0b;
-
 }
 
 .stock-indicator.red .dot{
-
 background:#dc2626;
-
 }
 
 /* =========================
-   META
-========================= */
-
-.catalog-meta{
-
-font-size:12px;
-color:var(--muted);
-
-display:flex;
-flex-direction:column;
-gap:2px;
-
-}
-
-.catalog-actions{
-
-display:flex;
-justify-content:space-between;
-gap:6px;
-margin-top:6px;
-
-}
-
-/* =========================
-   TOOLBAR
-========================= */
-
-.catalog-toolbar{
-
-display:flex;
-flex-wrap:wrap;
-gap:8px;
-margin-bottom:10px;
-
-}
-
-/* =========================
-   LISTAS
-========================= */
-
-.list{
-
-list-style:none;
-padding:0;
-margin:0;
-
-display:flex;
-flex-direction:column;
-gap:8px;
-
-}
-
-.list li{
-
-padding:10px;
-border-radius:10px;
-border:1px solid var(--border);
-background:white;
-
-cursor:pointer;
-
-}
-
-.list li:hover{
-
-background:#f6f6f6;
-
-}
-
-/* =========================
-   TABLAS
+TABLAS
 ========================= */
 
 .table{
@@ -508,7 +400,7 @@ text-align:left;
 }
 
 /* =========================
-   SCROLL TABLAS
+SCROLL TABLAS
 ========================= */
 
 .table-wrapper{
@@ -518,15 +410,13 @@ overflow:auto;
 }
 
 /* =========================
-   RESPONSIVE
+RESPONSIVE
 ========================= */
 
 @media (max-width:900px){
 
 .app{
-
 flex-direction:column;
-
 }
 
 .sidebar{
@@ -538,105 +428,19 @@ overflow:auto;
 }
 
 .nav{
-
 flex-direction:row;
-
 }
 
 .main{
-
 padding:14px;
-
 }
 
 .grid-2{
-
 grid-template-columns:1fr;
-
 }
 
 .catalog-grid{
-
 grid-template-columns:1fr;
-
 }
 
-}
-/* ======================
-   MEJORAS VISUALES PRO
-====================== */
-
-/* Colores SIMEC */
-:root{
---primary:#b31217;
---primary-dark:#8f0f13;
-}
-
-/* Sidebar más elegante */
-
-.sidebar{
-background:#ffffff;
-}
-
-.logo{
-background:rgba(179,18,23,0.05);
-border:1px solid rgba(179,18,23,0.2);
-}
-
-.nav-btn.activa{
-background:var(--primary);
-border-color:var(--primary);
-}
-
-/* Botones arreglados */
-
-button{
-height:38px;
-padding:0 12px;
-border-radius:10px;
-white-space:nowrap;
-}
-
-/* Catalogo más compacto */
-
-.catalog-grid{
-grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
-gap:12px;
-}
-
-.catalog-card{
-padding:14px;
-border-radius:12px;
-}
-
-.catalog-card:hover{
-border-color:var(--primary);
-}
-
-/* Acciones catalogo */
-
-.catalog-actions{
-gap:6px;
-}
-
-/* Semáforo más visible */
-
-.stock-indicator{
-font-weight:700;
-}
-
-/* Tarjetas */
-
-.card{
-border-radius:14px;
-}
-
-/* Formularios */
-
-.form{
-gap:10px;
-}
-
-.form-group{
-gap:4px;
 }
