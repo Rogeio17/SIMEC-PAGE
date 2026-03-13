@@ -1420,7 +1420,7 @@ async function eliminarMovimiento(id){
     return;
   }
 
-  const res = await fetch(`/api/movimientos/${id}`,{
+  const res = await apiFetch(`${API_BASE}/movimientos/${id}`,{
     method:"DELETE"
   });
 
@@ -1429,10 +1429,10 @@ async function eliminarMovimiento(id){
   if(data.ok){
     alert("Movimiento eliminado");
 
-    await refrescarMovimientosProyecto(); 
+    await refrescarMovimientosProyecto();
 
   }else{
-    alert("Error al eliminar");
+    alert(data.message || "Error al eliminar");
   }
 
 }
