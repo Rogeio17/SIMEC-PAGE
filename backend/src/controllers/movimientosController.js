@@ -351,45 +351,4 @@ export async function eliminarMovimiento(req, res) {
     res.status(500).json({ error: "Error eliminando movimiento" });
   }
 }
-export async function eliminarMovimiento(req, res){
-  try{
-
-    const id = Number(req.params.id);
-
-    const [rows] = await pool.query(
-      "SELECT * FROM movimientos WHERE id=?",
-      [id]
-    );
-
-    if(rows.length === 0){
-      return res.status(404).json({ok:false, message:"Movimiento no existe"});
-    }
-
-    const mv = rows[0];
-
-    if(mv.tipo === "salida"){
-      await pool.query(
-        "UPDATE materiales SET stock = stock + ? WHERE id=?",
-        [mv.cantidad, mv.material_id]
-      );
-    }
-
-    if(mv.tipo === "entrada"){
-      await pool.query(
-        "UPDATE materiales SET stock = stock - ? WHERE id=?",
-        [mv.cantidad, mv.material_id]
-      );
-    }
-
-    await pool.query(
-      "DELETE FROM movimientos WHERE id=?",
-      [id]
-    );
-
-    res.json({ok:true});
-
-  }catch(err){
-    console.error(err);
-    res.status(500).json({ok:false, message:"Error eliminando movimiento"});
-  }
-}
+ 
