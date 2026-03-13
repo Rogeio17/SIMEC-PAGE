@@ -8,7 +8,8 @@ import {
   registrarSalida,
   listarMovimientosPorProyecto,
   listarMovimientosPorProyectoYEtapa,
-  ajustarMovimiento
+  ajustarMovimiento,
+  eliminarMovimiento
 } from "../controllers/movimientosController.js";
 
 const router = express.Router();
@@ -23,6 +24,7 @@ router.get("/", listarMovimientosGlobal);
 router.post("/proyecto/:id/salida", requireRole("admin"), registrarSalida);
 router.get("/proyecto/:id/movimientos", listarMovimientosPorProyecto);
 router.get("/proyecto/:id/etapa/:etapaId/movimientos", listarMovimientosPorProyectoYEtapa);
+router.delete("/movimientos/:id", requireAuth, eliminarMovimiento);
 
 
 router.post("/ajustar/:movimiento_id", ajustarMovimiento);

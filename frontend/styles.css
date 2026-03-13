@@ -153,39 +153,73 @@ padding:14px;
 }
 
 /* =========================
-BOTONES
+BOTONES MEJORADOS
 ========================= */
 
 button{
-height:36px;
-padding:0 12px;
+height:38px;
+padding:0 14px;
 border-radius:10px;
 border:1px solid var(--border);
 background:white;
 cursor:pointer;
-font-weight:500;
+font-weight:600;
 white-space:nowrap;
+transition:all .2s ease;
+box-shadow:0 2px 4px rgba(0,0,0,.08);
 }
 
+/* efecto al pasar mouse */
+
 button:hover{
+transform:translateY(-2px);
+box-shadow:0 6px 14px rgba(0,0,0,.18);
 border-color:var(--primary);
 color:var(--primary);
 }
+
+/* botón principal */
 
 button.primary{
 background:var(--primary);
 border:none;
 color:white;
+box-shadow:0 3px 8px rgba(179,18,23,.4);
 }
 
 button.primary:hover{
 background:var(--primary-dark);
+transform:translateY(-2px);
+box-shadow:0 8px 18px rgba(179,18,23,.5);
 }
+
+/* botón peligro */
 
 .btn-danger{
 background:#dc2626;
 border:none;
 color:white;
+box-shadow:0 3px 8px rgba(220,38,38,.4);
+}
+
+.btn-danger:hover{
+background:#b91c1c;
+transform:translateY(-2px);
+box-shadow:0 8px 18px rgba(220,38,38,.6);
+}
+
+/* botones pequeños tipo acciones (Excel PDF etc) */
+
+.btn-action{
+background:#f5f5f5;
+border:1px solid var(--border);
+font-size:13px;
+}
+
+.btn-action:hover{
+background:var(--primary);
+color:white;
+border-color:var(--primary);
 }
 
 /* =========================

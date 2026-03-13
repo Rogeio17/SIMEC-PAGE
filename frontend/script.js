@@ -1155,7 +1155,7 @@ async function cargarMovimientosDeProyecto(proyectoId) {
   if (!data.ok) return alert(data.message || "Error al cargar movimientos del proyecto");
 
   const lista = data.movimientos || [];
-  // Orden por fecha asc para agrupar en render
+  
   lista.sort((a,b) => new Date(a.creado_en) - new Date(b.creado_en));
 
   let lastDate = null;
@@ -1186,7 +1186,7 @@ async function cargarMovimientosDeProyecto(proyectoId) {
 
       const trSep = document.createElement("tr");
       trSep.className = "tr-dia-sep";
-      trSep.innerHTML = `<td colspan="7">${dt.toLocaleDateString("es-MX", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}</td>`;
+      trSep.innerHTML = `<td colspan="8">${dt.toLocaleDateString("es-MX", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}</td>`;
       tbody.appendChild(trSep);
       lastDate = dt;
     }
@@ -1201,6 +1201,11 @@ async function cargarMovimientosDeProyecto(proyectoId) {
       <td>${mv.comentario || ""}</td>
       <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
       <td>${emp || "-"}</td>
+      <td>
+    <button class="btn-danger" onclick="eliminarMovimiento(${mv.id})">
+      Eliminar
+    </button>
+  </td>
     `;
     tbody.appendChild(tr);
   }
@@ -1218,7 +1223,7 @@ async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
   if (!data.ok) return alert(data.message || "Error al cargar movimientos del proyecto");
 
   const lista = data.movimientos || [];
-  // Orden por fecha asc para agrupar en render
+
   lista.sort((a,b) => new Date(a.creado_en) - new Date(b.creado_en));
 
   let lastDate = null;
@@ -1249,7 +1254,7 @@ async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
 
       const trSep = document.createElement("tr");
       trSep.className = "tr-dia-sep";
-      trSep.innerHTML = `<td colspan="7">${dt.toLocaleDateString("es-MX", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}</td>`;
+      trSep.innerHTML = `<td colspan="8">${dt.toLocaleDateString("es-MX", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}</td>`;
       tbody.appendChild(trSep);
       lastDate = dt;
     }
@@ -1264,6 +1269,10 @@ async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
       <td>${mv.comentario || ""}</td>
       <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
       <td>${emp || "-"}</td>
+      <td>
+         <buttoon class="btn-danger" onclick="eliminarMovimiento(${mv.id})">Eliminar
+         </button>
+      </td>
     `;
     tbody.appendChild(tr);
   }
@@ -1403,6 +1412,30 @@ document.getElementById("btn-export-etapa-pdf")?.addEventListener("click", (e) =
     `proyecto_${proyectoSeleccionadoId}_etapa_${etapaSeleccionadaId}.pdf`
   );
 });
+
+/*===================== Eliminar Movimiento =====================*/
+async function eliminarMovimiento(id){
+
+  if(!confirm("¿Eliminar este movimiento?")){
+    return;
+  }
+
+  const res = await fetch(`/api/movimientos/${id}`,{
+    method:"DELETE"
+  });
+
+  const data = await res.json();
+
+  if(data.ok){
+    alert("Movimiento eliminado");
+
+    await refrescarMovimientosProyecto(); 
+
+  }else{
+    alert("Error al eliminar");
+  }
+
+}
 
 
 /* ==================== ADMIN ALMACÉN (material + lotes) ==================== */
@@ -1662,7 +1695,7 @@ document.getElementById("form-ajustar-material-sin-lote")?.addEventListener("sub
 
   const form = e.target;
 
-  const tipo = String(form.tipo.value || "").toLowerCase(); // entrada | salida
+  const tipo = String(form.tipo.value || "").toLowerCase(); 
   const qty = Number(form.cantidad.value);
   const comentario = form.comentario.value.trim() || null;
 
@@ -1812,7 +1845,7 @@ async function cargarMovimientosGlobal() {
   if (!data.ok) return alert(data.message || "Error al cargar movimientos globales");
 
   const lista = data.movimientos || [];
-  // orden asc para agrupar
+  
   lista.sort((a,b) => new Date(a.creado_en) - new Date(b.creado_en));
 
   let lastDate = null;

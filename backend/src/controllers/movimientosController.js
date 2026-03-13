@@ -297,3 +297,57 @@ export async function registrarSalida(req, res) {
 export async function ajustarMovimiento(_req, res) {
   return res.status(501).json({ ok: false, message: "ajustarMovimiento no implementado (compatibilidad)" });
 }
+
+export async function eliminarMovimiento(req, res) {
+  try {
+    const movimientoId = Number(req.params.id);
+
+    const conn = await pool.getConnection();
+
+    try {
+      await conn.beginTransaction();
+
+      const [[mov]] = await conn.query(
+        `SELECT material_id, cantidad, lote_id, tipo
+         FROM movimientos
+         WHERE id = ?`,
+        [movimientoId]
+      );
+
+      if (!mov) {
+        await conn.rollback();
+        return res.status(404).json({ error: "Movimiento no encontrado" });
+      }
+
+      if (mov.tipo === "SALIDA") {
+
+        await conn.query(
+          `UPDATE material_lotes
+           SET cantidad_disponible = cantidad_disponible + ?
+           WHERE id = ?`,
+          [mov.cantidad, mov.lote_id]
+        );
+
+      }
+
+      await conn.query(
+        `DELETE FROM movimientos WHERE id = ?`,
+        [movimientoId]
+      );
+
+      await conn.commit();
+
+      res.json({ ok: true });
+
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+  } catch (err) {
+    console.error("eliminarMovimiento:", err);
+    res.status(500).json({ error: "Error eliminando movimiento" });
+  }
+}
