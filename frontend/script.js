@@ -1197,7 +1197,7 @@ async function cargarMovimientosDeProyecto(proyectoId) {
       <td>${new Date(mv.creado_en).toLocaleString()}</td>
       <td>${mv.codigo} - ${mv.nombre}</td>
       <td>${mv.tipo}</td>
-      <td>${mv.cantidad}</td>
+      <td>${mv.cantidad} ${mv.unidad || "pza"}</td>
       <td>${mv.comentario || ""}</td>
       <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
       <td>${emp || "-"}</td>
@@ -1265,7 +1265,7 @@ async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
       <td>${new Date(mv.creado_en).toLocaleString()}</td>
       <td>${mv.codigo} - ${mv.nombre}</td>
       <td>${mv.tipo}</td>
-      <td>${mv.cantidad}</td>
+      <td>${mv.cantidad} ${mv.unidad || "pza"}</td>
       <td>${mv.comentario || ""}</td>
       <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
       <td>${emp || "-"}</td>
@@ -1889,7 +1889,7 @@ async function cargarMovimientosGlobal() {
       <td>${mv.proyecto_id ? `${mv.proyecto_clave || ""} - ${mv.proyecto_nombre || ""}`.trim() : "-"}</td>
       <td>${mv.etapa_id || "-"}</td>
       <td>${mv.tipo}</td>
-      <td>${mv.cantidad}</td>
+      <td>${mv.cantidad} ${mv.unidad || "pza"}</td>
       <td>${mv.comentario || ""}</td>
       <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
       <td>${emp || "-"}</td>
