@@ -101,6 +101,15 @@ function aplicarUIporRol() {
 
   if (btnEtapaX) btnEtapaX.style.display = admin ? "inline-flex" : "none";
   if (btnEtapaP) btnEtapaP.style.display = admin ? "inline-flex" : "none";
+
+  const btnGuardarVehiculo = document.getElementById("btn-guardar-vehiculo");
+  const btnGuardarMantenimiento = document.getElementById("btn-guardar-mantenimiento");
+  const hintVehiculo = document.getElementById("hint-vehiculo-admin");
+  const hintMantenimiento = document.getElementById("hint-mantenimiento-admin");
+  if (btnGuardarVehiculo) btnGuardarVehiculo.disabled = !admin;
+  if (btnGuardarMantenimiento) btnGuardarMantenimiento.disabled = !admin;
+  if (hintVehiculo) hintVehiculo.style.display = admin ? "none" : "block";
+  if (hintMantenimiento) hintMantenimiento.style.display = admin ? "none" : "block";
 }
 
 /* ==================== NAV / SECCIONES ==================== */
@@ -119,6 +128,7 @@ function mostrarSeccion(id) {
   if (id === "empleados") cargarEmpleados();
   if (id === "proveedores") cargarProveedores();
   if (id === "catalogo") cargarCatalogo();
+  if (id === "vehiculos") cargarVehiculos();
   if (id === "materiales" || id === "admin-almacen") cargarProveedores?.();
 }
 
@@ -1197,7 +1207,7 @@ async function cargarMovimientosDeProyecto(proyectoId) {
       <td>${new Date(mv.creado_en).toLocaleString()}</td>
       <td>${mv.codigo} - ${mv.nombre}</td>
       <td>${mv.tipo}</td>
-      <td>${mv.cantidad} ${mv.unidad || "pza"}</td>
+      <td>${mv.cantidad}</td>
       <td>${mv.comentario || ""}</td>
       <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
       <td>${emp || "-"}</td>
@@ -1265,12 +1275,12 @@ async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
       <td>${new Date(mv.creado_en).toLocaleString()}</td>
       <td>${mv.codigo} - ${mv.nombre}</td>
       <td>${mv.tipo}</td>
-      <td>${mv.cantidad} ${mv.unidad || "pza"}</td>
+      <td>${mv.cantidad}</td>
       <td>${mv.comentario || ""}</td>
       <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
       <td>${emp || "-"}</td>
       <td>
-         <button class="btn-danger" onclick="eliminarMovimiento(${mv.id})">Eliminar
+         <buttoon class="btn-danger" onclick="eliminarMovimiento(${mv.id})">Eliminar
          </button>
       </td>
     `;
@@ -1889,7 +1899,7 @@ async function cargarMovimientosGlobal() {
       <td>${mv.proyecto_id ? `${mv.proyecto_clave || ""} - ${mv.proyecto_nombre || ""}`.trim() : "-"}</td>
       <td>${mv.etapa_id || "-"}</td>
       <td>${mv.tipo}</td>
-      <td>${mv.cantidad} ${mv.unidad || "pza"}</td>
+      <td>${mv.cantidad}</td>
       <td>${mv.comentario || ""}</td>
       <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
       <td>${emp || "-"}</td>
@@ -2270,6 +2280,250 @@ async function cargarProveedoresSelects() {
 }
 
 
+
+
+/* ==================== VEHÍCULOS ==================== */
+let vehiculosCache = [];
+let vehiculoSeleccionadoId = null;
+
+function formatearFechaVehiculo(fecha) {
+  if (!fecha) return "—";
+  const d = new Date(`${fecha}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return fecha;
+  return d.toLocaleDateString();
+}
+
+function sumarMesesFecha(fechaStr, meses) {
+  if (!fechaStr) return "";
+  const base = new Date(`${fechaStr}T00:00:00`);
+  if (Number.isNaN(base.getTime())) return "";
+  base.setMonth(base.getMonth() + meses);
+  return base.toISOString().slice(0, 10);
+}
+
+function obtenerNombreVehiculo(v) {
+  if (!v) return "Ninguno";
+  return `${v.codigo} · ${v.marca} ${v.modelo} · ${v.placas}`;
+}
+
+function limpiarFormVehiculo() {
+  const form = document.getElementById("form-vehiculo");
+  if (!form) return;
+  form.reset();
+  const id = document.getElementById("vehiculo_id");
+  if (id) id.value = "";
+}
+
+function setVehiculoSeleccionado(id) {
+  vehiculoSeleccionadoId = id;
+  const actual = vehiculosCache.find(v => Number(v.id) === Number(id)) || null;
+  const info = document.getElementById("info-vehiculo-seleccionado");
+  if (info) info.textContent = obtenerNombreVehiculo(actual);
+
+  document.querySelectorAll(".vehiculo-item").forEach(el => {
+    el.classList.toggle("activo-item", Number(el.dataset.id) === Number(id));
+  });
+
+  cargarMantenimientosVehiculo(id);
+}
+
+function renderAlertasVehiculos(alertas = []) {
+  const box = document.getElementById("vehiculos-alertas");
+  if (!box) return;
+  if (!alertas.length) {
+    box.innerHTML = `<div class="vehiculo-alerta-item">No hay alertas para los próximos 7 días.</div>`;
+    return;
+  }
+  box.innerHTML = alertas.map(a => `
+    <div class="vehiculo-alerta-item ${a.alerta_estado === "vencido" ? "vencido" : "proximo"}">
+      <strong>${a.codigo}</strong> · ${a.marca} ${a.modelo} (${a.placas})<br>
+      ${a.tipo_mantenimiento} · próximo: ${formatearFechaVehiculo(a.fecha_proximo)}
+      ${Number(a.dias_restantes) < 0 ? `· vencido hace ${Math.abs(Number(a.dias_restantes))} día(s)` : `· faltan ${a.dias_restantes} día(s)`}
+    </div>
+  `).join("");
+}
+
+function renderVehiculos(lista = []) {
+  const cont = document.getElementById("lista-vehiculos");
+  if (!cont) return;
+
+  if (!lista.length) {
+    cont.innerHTML = `<div class="vehiculo-alerta-item">No hay vehículos registrados.</div>`;
+    return;
+  }
+
+  cont.innerHTML = "";
+  lista.forEach(v => {
+    const div = document.createElement("div");
+    div.className = "vehiculo-item" + (Number(v.id) === Number(vehiculoSeleccionadoId) ? " activo-item" : "");
+    div.dataset.id = v.id;
+    div.innerHTML = `
+      <div>
+        <div class="vehiculo-item-titulo">${escapeHtml(v.codigo)} · ${escapeHtml(v.marca)} ${escapeHtml(v.modelo)}</div>
+        <div class="vehiculo-item-sub">Placas: ${escapeHtml(v.placas)}${v.anio ? ` · Año: ${escapeHtml(v.anio)}` : ""}${v.color ? ` · Color: ${escapeHtml(v.color)}` : ""}</div>
+        <div class="vehiculo-badge">${escapeHtml(v.estado || "activo")}</div>
+      </div>
+      <div class="vehiculo-item-meta">
+        <div><strong>${escapeHtml(v.proximo_tipo || "Sin mantenimiento")}</strong></div>
+        <div>Próximo: ${formatearFechaVehiculo(v.proximo_mantenimiento)}</div>
+      </div>
+    `;
+    div.addEventListener("click", () => {
+      setVehiculoSeleccionado(v.id);
+      llenarFormVehiculo(v);
+    });
+    cont.appendChild(div);
+  });
+}
+
+function llenarFormVehiculo(v) {
+  const form = document.getElementById("form-vehiculo");
+  if (!form || !v) return;
+  form.vehiculo_id.value = v.id;
+  form.codigo.value = v.codigo || "";
+  form.placas.value = v.placas || "";
+  form.marca.value = v.marca || "";
+  form.modelo.value = v.modelo || "";
+  form.anio.value = v.anio || "";
+  form.color.value = v.color || "";
+  form.numero_serie.value = v.numero_serie || "";
+  form.estado.value = v.estado || "activo";
+}
+
+async function cargarAlertasVehiculos() {
+  const res = await apiFetch(`${API_BASE}/vehiculos/alertas`);
+  const data = await res.json();
+  if (!data.ok) return;
+  renderAlertasVehiculos(data.alertas || []);
+}
+
+async function cargarVehiculos() {
+  const res = await apiFetch(`${API_BASE}/vehiculos`);
+  const data = await res.json();
+  if (!data.ok) {
+    alert(data.message || "Error al cargar vehículos");
+    return;
+  }
+
+  vehiculosCache = data.vehiculos || [];
+  renderVehiculos(vehiculosCache);
+  await cargarAlertasVehiculos();
+
+  if (!vehiculoSeleccionadoId && vehiculosCache.length) {
+    setVehiculoSeleccionado(vehiculosCache[0].id);
+  } else if (vehiculoSeleccionadoId) {
+    const existe = vehiculosCache.some(v => Number(v.id) === Number(vehiculoSeleccionadoId));
+    if (existe) setVehiculoSeleccionado(vehiculoSeleccionadoId);
+  }
+}
+
+async function guardarVehiculo(e) {
+  e.preventDefault();
+  if (!esAdmin()) return alert("No tienes permisos (solo admin).");
+
+  const form = e.target;
+  const id = form.vehiculo_id.value;
+  const payload = {
+    codigo: form.codigo.value.trim(),
+    placas: form.placas.value.trim(),
+    marca: form.marca.value.trim(),
+    modelo: form.modelo.value.trim(),
+    anio: form.anio.value ? Number(form.anio.value) : null,
+    color: form.color.value.trim() || null,
+    numero_serie: form.numero_serie.value.trim() || null,
+    estado: form.estado.value,
+  };
+
+  const res = await apiFetch(`${API_BASE}/vehiculos${id ? `/${id}` : ""}`, {
+    method: id ? "PUT" : "POST",
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!data.ok) return alert(data.message || "Error al guardar vehículo");
+
+  limpiarFormVehiculo();
+  await cargarVehiculos();
+  alert(id ? "Vehículo actualizado" : "Vehículo registrado");
+}
+
+async function cargarMantenimientosVehiculo(vehiculoId) {
+  const tbody = document.querySelector("#tabla-mantenimientos-vehiculo tbody");
+  if (!tbody || !vehiculoId) return;
+
+  const res = await apiFetch(`${API_BASE}/vehiculos/${vehiculoId}/mantenimientos`);
+  const data = await res.json();
+  if (!data.ok) {
+    tbody.innerHTML = `<tr><td colspan="7">No se pudo cargar el historial.</td></tr>`;
+    return;
+  }
+
+  const rows = data.mantenimientos || [];
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7">Sin mantenimientos registrados.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(m => `
+    <tr>
+      <td>${escapeHtml(m.tipo_mantenimiento || "")}</td>
+      <td>${formatearFechaVehiculo(m.fecha_realizado)}</td>
+      <td>${formatearFechaVehiculo(m.fecha_proximo)}</td>
+      <td>${m.costo != null && m.costo !== "" ? `$${Number(m.costo).toFixed(2)}` : "—"}</td>
+      <td>${escapeHtml(m.proveedor || "")}</td>
+      <td>${escapeHtml(m.observaciones || m.archivo || "")}</td>
+      <td>${escapeHtml(m.usuario_nombre || m.usuario_email || "-")}</td>
+    </tr>
+  `).join("");
+}
+
+async function guardarMantenimientoVehiculo(e) {
+  e.preventDefault();
+  if (!esAdmin()) return alert("No tienes permisos (solo admin).");
+  if (!vehiculoSeleccionadoId) return alert("Selecciona un vehículo primero.");
+
+  const form = e.target;
+  const payload = {
+    tipo_mantenimiento: form.tipo_mantenimiento.value,
+    fecha_realizado: form.fecha_realizado.value,
+    fecha_proximo: form.fecha_proximo.value,
+    costo: form.costo.value || null,
+    proveedor: form.proveedor.value.trim() || null,
+    observaciones: form.observaciones.value.trim() || null,
+    archivo: form.archivo.value.trim() || null,
+  };
+
+  const res = await apiFetch(`${API_BASE}/vehiculos/${vehiculoSeleccionadoId}/mantenimientos`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!data.ok) return alert(data.message || "Error al registrar mantenimiento");
+
+  form.reset();
+  await cargarVehiculos();
+  await cargarMantenimientosVehiculo(vehiculoSeleccionadoId);
+  alert("Mantenimiento registrado");
+}
+
+function initVehiculosUI() {
+  document.getElementById("form-vehiculo")?.addEventListener("submit", guardarVehiculo);
+  document.getElementById("btn-limpiar-vehiculo")?.addEventListener("click", limpiarFormVehiculo);
+  document.getElementById("form-mantenimiento-vehiculo")?.addEventListener("submit", guardarMantenimientoVehiculo);
+
+  document.getElementById("btn-mantenimiento-6m")?.addEventListener("click", () => {
+    const fechaRealizado = document.querySelector('#form-mantenimiento-vehiculo [name="fecha_realizado"]')?.value;
+    const inputProximo = document.querySelector('#form-mantenimiento-vehiculo [name="fecha_proximo"]');
+    if (inputProximo) inputProximo.value = sumarMesesFecha(fechaRealizado, 6);
+  });
+
+  document.getElementById("btn-mantenimiento-1a")?.addEventListener("click", () => {
+    const fechaRealizado = document.querySelector('#form-mantenimiento-vehiculo [name="fecha_realizado"]')?.value;
+    const inputProximo = document.querySelector('#form-mantenimiento-vehiculo [name="fecha_proximo"]');
+    if (inputProximo) inputProximo.value = sumarMesesFecha(fechaRealizado, 12);
+  });
+}
+
+
 /* ==================== INIT ==================== */
 
 (function init() {
@@ -2283,7 +2537,7 @@ async function cargarProveedoresSelects() {
   cargarMaterialesEnSelectProyecto();
   cargarProveedores();
   cargarProveedoresSelects();
-
+  cargarVehiculos();
 
   setAdminPanelVisible(false);
 
@@ -2299,6 +2553,7 @@ async function cargarProveedoresSelects() {
 
   // Empleados (solo admin)
   initEmpleadosUI();
+  initVehiculosUI();
 })();
 (function initToggleArchivados(){
   const t = document.getElementById("toggle-ver-archivados");
