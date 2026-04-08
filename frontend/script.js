@@ -187,7 +187,7 @@ function renderMaterialesTabla(lista) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${m.codigo}</td>
-      <td>${m.nombre}</td>
+      <td>${m.nombre}${m.tipo_material === "herramienta" ? ' <span class="badge-herramienta">Herramienta</span>' : ""}</td>
       <td>${m.stock_actual}</td>
       <td>${m.ubicacion || ""}</td>
       <td>${m.proveedor_nombre || ""}</td>
@@ -258,6 +258,7 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
     nombre: form.nombre.value.trim(),
 
     unidad: (form.unidad?.value || "pza").trim(),
+    tipo_material: (form.tipo_material?.value || "material").trim(),
 
     stock_inicial: parseFloat(form.stock_inicial.value || 0),
     stock_minimo: parseFloat(form.stock_minimo.value || 0),
@@ -1495,7 +1496,7 @@ function renderAdminMaterialesTabla(lista) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${m.codigo}</td>
-      <td>${m.nombre}</td>
+      <td>${m.nombre}${m.tipo_material === "herramienta" ? ' <span class="badge-herramienta">Herramienta</span>' : ""}</td>
       <td>${m.stock_actual}</td>
       <td>${m.ubicacion || ""}</td>
       <td>
@@ -1553,6 +1554,7 @@ async function seleccionarMaterialAdmin(materialId, silencioso = false) {
     f.nombre.value = mat.nombre || "";
     f.codigo.value = mat.codigo || "";
     if (f.unidad) f.unidad.value = (mat.unidad || "pza");
+    if (f.tipo_material) f.tipo_material.value = (mat.tipo_material || "material");
     f.stock_minimo.value = mat.stock_minimo ?? 0;
     f.ubicacion.value = mat.ubicacion || "";
     
@@ -1637,6 +1639,7 @@ document.getElementById("form-editar-material-base")?.addEventListener("submit",
     nombre: form.nombre.value.trim(),
     codigo: (form.codigo?.value ?? "").trim(),
     unidad: (form.unidad?.value ?? "pza").trim(),
+    tipo_material: (form.tipo_material?.value ?? "material").trim(),
     stock_minimo: Number(form.stock_minimo.value || 0),
     ubicacion: form.ubicacion.value.trim() || null
   };
@@ -1968,6 +1971,8 @@ document.getElementById("form-usuario")?.addEventListener("submit", async (e) =>
 /* ==================== EMPLEADOS ==================== */
 
 let empleadosCache = [];
+let herramientasResguardoCache = [];
+let resguardosHerramientasCache = [];
 
 async function cargarEmpleados() {
   if (!esAdmin()) return;
@@ -1978,21 +1983,18 @@ async function cargarEmpleados() {
   const params = new URLSearchParams();
   if (activoVal === "1") params.set("activo", "1");
   if (activoVal === "0") params.set("activo", "0");
-  // si es "all" no mandamos filtro
   const url = `${API_BASE}/empleados${params.toString() ? "?" + params.toString() : ""}`;
 
   const res = await apiFetch(url);
   const data = await res.json().catch(() => ({}));
 
   if (!data.empleados) {
-    // backend aún no montado o error
     console.warn("No se pudieron cargar empleados:", data);
     return;
   }
 
   empleadosCache = data.empleados;
 
-  // filtro por búsqueda en frontend
   const lista = q
     ? empleadosCache.filter(e =>
         (e.nombre || "").toLowerCase().includes(q.toLowerCase()) ||
@@ -2002,8 +2004,8 @@ async function cargarEmpleados() {
     : empleadosCache;
 
   renderEmpleadosTabla(lista);
-  // también refresca selector de salida si existe
   renderEmpleadosSelect(lista.filter(e => e.activo));
+  renderEmpleadosResguardoSelects();
 }
 
 function renderEmpleadosTabla(lista) {
@@ -2018,6 +2020,8 @@ function renderEmpleadosTabla(lista) {
       <td>${e.puesto || ""}</td>
       <td>${e.telefono || ""}</td>
       <td>${e.activo ? "Activo" : "Inactivo"}</td>
+      <td>${Number(e.herramientas_activas || 0)}</td>
+      <td><button class="btn-secondary" type="button" onclick="seleccionarEmpleadoResguardo(${e.id})">Ver resguardos</button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -2027,7 +2031,6 @@ function renderEmpleadosSelect(lista) {
   const sel = document.getElementById("empleado_select");
   if (!sel) return;
   sel.innerHTML = "";
-
   (lista || []).forEach(e => {
     const opt = document.createElement("option");
     opt.value = e.id;
@@ -2036,17 +2039,35 @@ function renderEmpleadosSelect(lista) {
   });
 }
 
+function renderEmpleadosResguardoSelects() {
+  const activos = (empleadosCache || []).filter(e => Number(e.activo) === 1 || e.activo === true);
+  const sels = [
+    [document.getElementById("resguardo_empleado_id"), `<option value="">Selecciona empleado</option>`],
+    [document.getElementById("filtro_resguardo_empleado"), `<option value="">Todos</option>`],
+  ];
+  sels.forEach(([sel, base]) => {
+    if (!sel) return;
+    const actual = sel.value;
+    sel.innerHTML = base;
+    activos.forEach(e => {
+      const opt = document.createElement("option");
+      opt.value = e.id;
+      opt.textContent = `${e.nombre}${e.puesto ? " — " + e.puesto : ""}`;
+      sel.appendChild(opt);
+    });
+    if ([...sel.options].some(o => o.value === actual)) sel.value = actual;
+  });
+}
+
 async function prepararSelectorEmpleadosSalida() {
   if (!esAdmin()) return;
-
-  // carga empleados si no están
   if (!empleadosCache.length) {
     const res = await apiFetch(`${API_BASE}/empleados?activo=1`);
     const data = await res.json().catch(() => ({}));
     empleadosCache = data.empleados || [];
   }
-
   renderEmpleadosSelect(empleadosCache.filter(e => e.activo));
+  renderEmpleadosResguardoSelects();
 
   const input = document.getElementById("empleado_buscar");
   if (input) {
@@ -2055,18 +2076,99 @@ async function prepararSelectorEmpleadosSalida() {
       const filtrados = !q
         ? empleadosCache.filter(e => e.activo)
         : empleadosCache.filter(e =>
-            e.activo &&
-            (
-              (e.nombre || "").toLowerCase().includes(q) ||
-              (e.puesto || "").toLowerCase().includes(q) ||
-              (e.telefono || "").toLowerCase().includes(q)
-            )
+            e.activo && ((e.nombre || "").toLowerCase().includes(q) || (e.puesto || "").toLowerCase().includes(q) || (e.telefono || "").toLowerCase().includes(q))
           );
-
       renderEmpleadosSelect(filtrados);
     };
   }
 }
+
+async function cargarHerramientasParaResguardo() {
+  const sel = document.getElementById("resguardo_material_id");
+  if (!sel) return;
+
+  const res = await apiFetch(`${API_BASE}/materiales?tipo_material=herramienta`);
+  const data = await res.json().catch(() => ({}));
+  if (!data.ok) return;
+
+  herramientasResguardoCache = data.materiales || [];
+  const actual = sel.value;
+  sel.innerHTML = `<option value="">Selecciona herramienta</option>`;
+  herramientasResguardoCache.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m.id;
+    opt.textContent = `${m.codigo} - ${m.nombre} · stock ${Number(m.stock_actual || 0).toFixed(2)} ${m.unidad || "pza"}`;
+    sel.appendChild(opt);
+  });
+  if ([...sel.options].some(o => o.value === actual)) sel.value = actual;
+}
+
+function fmtFechaHora(v) {
+  if (!v) return "-";
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? v : d.toLocaleString();
+}
+
+function renderResguardosHerramientas(lista) {
+  const tbody = document.querySelector("#tabla-resguardos-herramientas tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  (lista || []).forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.empleado_nombre || ""}${r.empleado_puesto ? " — " + r.empleado_puesto : ""}</td>
+      <td>${r.material_codigo || ""} - ${r.material_nombre || ""}</td>
+      <td>${Number(r.cantidad || 0).toFixed(2)} ${r.material_unidad || "pza"}</td>
+      <td>${fmtFechaHora(r.fecha_salida)}</td>
+      <td>${fmtFechaHora(r.fecha_devolucion)}</td>
+      <td><span class="${r.estado === "activo" ? "badge-activo" : "badge-devuelto"}">${r.estado}</span></td>
+      <td>${r.comentario || ""}</td>
+      <td>${r.estado === "activo" ? `<button class="btn-primary" type="button" onclick="devolverResguardoHerramienta(${r.id})">Devolver</button>` : "-"}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function cargarResguardosHerramientas() {
+  const estadoVal = document.getElementById("filtro_resguardo_estado")?.value || "activo";
+  const empleadoId = document.getElementById("filtro_resguardo_empleado")?.value || "";
+  const params = new URLSearchParams();
+  if (estadoVal && estadoVal !== "all") params.set("estado", estadoVal);
+  if (empleadoId) params.set("empleado_id", empleadoId);
+
+  const res = await apiFetch(`${API_BASE}/empleados/herramientas/resguardos?${params.toString()}`);
+  const data = await res.json().catch(() => ({}));
+  if (!data.ok) return alert(data.message || "No se pudieron cargar los resguardos");
+
+  resguardosHerramientasCache = data.resguardos || [];
+  renderResguardosHerramientas(resguardosHerramientasCache);
+}
+
+window.seleccionarEmpleadoResguardo = async function(empleadoId) {
+  const selA = document.getElementById("resguardo_empleado_id");
+  const selB = document.getElementById("filtro_resguardo_empleado");
+  if (selA) selA.value = String(empleadoId);
+  if (selB) selB.value = String(empleadoId);
+  const st = document.getElementById("filtro_resguardo_estado");
+  if (st) st.value = "activo";
+  await cargarResguardosHerramientas();
+};
+
+window.devolverResguardoHerramienta = async function(id) {
+  if (!esAdmin()) return alert("Solo admin puede devolver herramientas.");
+  if (!confirm("¿Marcar esta herramienta como devuelta?")) return;
+
+  const res = await apiFetch(`${API_BASE}/empleados/herramientas/resguardos/${id}/devolver`, { method: "POST", body: JSON.stringify({}) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) return alert(data.message || "No se pudo devolver la herramienta");
+
+  alert("Herramienta devuelta");
+  await cargarMateriales();
+  await cargarHerramientasParaResguardo();
+  await cargarEmpleados();
+  await cargarResguardosHerramientas();
+};
 
 function initEmpleadosUI() {
   const form = document.getElementById("formEmpleado");
@@ -2077,7 +2179,7 @@ function initEmpleadosUI() {
 
       const nombre = document.getElementById("emp_nombre")?.value?.trim();
       const puesto = document.getElementById("emp_puesto")?.value?.trim() || null;
-      const telefono = document.getElementById("emp_tel")?.value?.trim() || null;
+      const telefono = document.getElementById("emp_telefono")?.value?.trim() || null;
 
       if (!nombre) return alert("Nombre requerido");
 
@@ -2096,11 +2198,50 @@ function initEmpleadosUI() {
     });
   }
 
+  document.getElementById("formResguardoHerramienta")?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    if (!esAdmin()) return alert("Solo admin puede asignar herramientas.");
+
+    const empleado_id = Number(document.getElementById("resguardo_empleado_id")?.value || 0);
+    const material_id = Number(document.getElementById("resguardo_material_id")?.value || 0);
+    const cantidad = Number(document.getElementById("resguardo_cantidad")?.value || 0);
+    const fecha_salida = document.getElementById("resguardo_fecha_salida")?.value || null;
+    const comentario = document.getElementById("resguardo_comentario")?.value?.trim() || null;
+
+    if (!empleado_id) return alert("Selecciona un empleado");
+    if (!material_id) return alert("Selecciona una herramienta");
+    if (!cantidad || cantidad <= 0) return alert("Cantidad inválida");
+
+    const res = await apiFetch(`${API_BASE}/empleados/herramientas/resguardos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ empleado_id, material_id, cantidad, fecha_salida, comentario })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) return alert(data.message || "No se pudo asignar la herramienta");
+
+    alert("Herramienta asignada");
+    ev.target.reset();
+    document.getElementById("resguardo_cantidad").value = 1;
+    await cargarMateriales();
+    await cargarHerramientasParaResguardo();
+    await cargarEmpleados();
+    await cargarResguardosHerramientas();
+  });
+
   document.getElementById("btnRefrescarEmpleados")?.addEventListener("click", cargarEmpleados);
   document.getElementById("emp_buscar")?.addEventListener("input", () => cargarEmpleados());
   document.getElementById("emp_filtro_activo")?.addEventListener("change", () => cargarEmpleados());
-}
+  document.getElementById("btnRefrescarResguardos")?.addEventListener("click", async () => {
+    await cargarHerramientasParaResguardo();
+    await cargarResguardosHerramientas();
+  });
+  document.getElementById("filtro_resguardo_empleado")?.addEventListener("change", cargarResguardosHerramientas);
+  document.getElementById("filtro_resguardo_estado")?.addEventListener("change", cargarResguardosHerramientas);
 
+  cargarHerramientasParaResguardo();
+  cargarResguardosHerramientas();
+}
 
 /* ==================== PROVEEDORES ==================== */
 

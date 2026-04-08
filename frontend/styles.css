@@ -469,3 +469,9 @@ grid-template-columns:1fr;
   .vehiculo-item { flex-direction: column; align-items: flex-start; }
   .vehiculo-item-meta { text-align: left; min-width: 0; }
 }
+
+.badge-herramienta{display:inline-block;padding:2px 8px;border-radius:999px;background:#fff3cd;color:#7a5d00;font-size:12px;margin-left:6px;}
+.badge-activo,.badge-devuelto{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;text-transform:capitalize;}
+.badge-activo{background:#ffe7a8;color:#6b4f00;}
+.badge-devuelto{background:#d9f7e8;color:#136c3e;}
+#tabla-resguardos-herramientas td button{white-space:nowrap;}

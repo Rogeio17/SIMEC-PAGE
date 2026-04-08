@@ -1,17 +1,33 @@
 import pool from "../config/db.js";
 
 const UNIDADES_VALIDAS = new Set(["pza", "m", "kg", "lt"]);
+const TIPOS_MATERIAL_VALIDOS = new Set(["material", "herramienta"]);
 
 function normalizarUnidad(u) {
   const x = String(u || "").trim().toLowerCase();
   return UNIDADES_VALIDAS.has(x) ? x : "pza";
 }
 
-export async function listarMateriales(_req, res) {
+function normalizarTipoMaterial(v) {
+  const x = String(v || "").trim().toLowerCase();
+  return TIPOS_MATERIAL_VALIDOS.has(x) ? x : "material";
+}
+
+export async function listarMateriales(req, res) {
   try {
+    const tipoMaterial = String(req.query?.tipo_material || "").trim().toLowerCase();
+    const where = ["m.activo = 1"];
+    const params = [];
+
+    if (tipoMaterial === "material" || tipoMaterial === "herramienta") {
+      where.push("COALESCE(m.tipo_material, 'material') = ?");
+      params.push(tipoMaterial);
+    }
+
     const [rows] = await pool.query(
       `SELECT
          m.id, m.codigo, m.nombre, m.unidad,
+         COALESCE(m.tipo_material, 'material') AS tipo_material,
          m.stock_actual, m.stock_minimo, m.ubicacion,
          m.activo, m.creado_en,
          m.proveedor_id,
@@ -28,8 +44,9 @@ export async function listarMateriales(_req, res) {
        LEFT JOIN proveedores p ON p.id = m.proveedor_id
        LEFT JOIN usuarios u1 ON u1.id = m.creado_por_usuario_id
        LEFT JOIN usuarios u2 ON u2.id = m.actualizado_por_usuario_id
-       WHERE m.activo = 1
-       ORDER BY m.id DESC`
+       WHERE ${where.join(" AND ")}
+       ORDER BY m.id DESC`,
+      params
     );
 
     res.json({ ok: true, materiales: rows });
@@ -190,6 +207,7 @@ export async function crearMaterial(req, res) {
       codigo,
       nombre,
       unidad = "pza", 
+      tipo_material = "material",
       stock_inicial = 0,
       stock_minimo = 0,
       ubicacion = null,
@@ -206,6 +224,7 @@ export async function crearMaterial(req, res) {
     }
 
     const unidadOk = normalizarUnidad(unidad);
+    const tipoMaterialOk = normalizarTipoMaterial(tipo_material);
 
     const cod = String(codigo ?? "").trim();
     const codigoFinal = (cod !== "") ? cod : null;
@@ -228,16 +247,17 @@ export async function crearMaterial(req, res) {
 
     const [ins] = await conn.query(
       `INSERT INTO materiales
-        (codigo, nombre, unidad, stock_actual, stock_minimo, ubicacion, activo, creado_en,
+        (codigo, nombre, unidad, tipo_material, stock_actual, stock_minimo, ubicacion, activo, creado_en,
          proveedor_id, ticket_numero, requiere_protocolo, protocolo_texto, precio_unitario,
          creado_por_usuario_id, actualizado_por_usuario_id)
-       VALUES (?, ?, ?, ?, ?, ?, 1, NOW(),
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(),
                ?, ?, ?, ?, ?,
                ?, ?)`,
       [
         codigoFinal,
         String(nombre).trim(),
         unidadOk, 
+        tipoMaterialOk,
         stockInicialNum,
         Number(stock_minimo) || 0,
         ubicacion || null,
@@ -304,7 +324,8 @@ export async function actualizarMaterial(req, res) {
     const {
       codigo,
       nombre,
-      unidad, 
+      unidad,
+      tipo_material,
       stock_minimo = 0,
       ubicacion = null,
     } = req.body;
@@ -317,137 +338,49 @@ export async function actualizarMaterial(req, res) {
       return res.status(400).json({ ok: false, message: "Nombre es requerido" });
     }
 
-    const setUnidad = (unidad !== undefined);
-    const unidadOk = setUnidad ? normalizarUnidad(unidad) : null;
-
-    if (codigo !== undefined) {
-      const cod = String(codigo ?? "").trim();
-
-      if (cod !== "") {
-        const [dup] = await pool.query(
-          `SELECT id FROM materiales WHERE codigo = ? AND id <> ? LIMIT 1`,
-          [cod, id]
-        );
-        if (dup.length) {
-          return res.status(409).json({ ok: false, message: "Ese código ya existe" });
-        }
-
-        if (setUnidad) {
-          await pool.query(
-            `UPDATE materiales
-             SET codigo = ?,
-                 nombre = ?,
-                 unidad = ?,
-                 stock_minimo = ?,
-                 ubicacion = ?,
-                 actualizado_por_usuario_id = ?
-             WHERE id = ?`,
-            [
-              cod,
-              String(nombre).trim(),
-              unidadOk,
-              Number(stock_minimo) || 0,
-              ubicacion || null,
-              req.user?.id ?? null,
-              id,
-            ]
-          );
-        } else {
-          await pool.query(
-            `UPDATE materiales
-             SET codigo = ?,
-                 nombre = ?,
-                 stock_minimo = ?,
-                 ubicacion = ?,
-                 actualizado_por_usuario_id = ?
-             WHERE id = ?`,
-            [
-              cod,
-              String(nombre).trim(),
-              Number(stock_minimo) || 0,
-              ubicacion || null,
-              req.user?.id ?? null,
-              id,
-            ]
-          );
-        }
-      } else {
-    
-        if (setUnidad) {
-          await pool.query(
-            `UPDATE materiales
-             SET codigo = NULL,
-                 nombre = ?,
-                 unidad = ?,
-                 stock_minimo = ?,
-                 ubicacion = ?,
-                 actualizado_por_usuario_id = ?
-             WHERE id = ?`,
-            [
-              String(nombre).trim(),
-              unidadOk,
-              Number(stock_minimo) || 0,
-              ubicacion || null,
-              req.user?.id ?? null,
-              id,
-            ]
-          );
-        } else {
-          await pool.query(
-            `UPDATE materiales
-             SET codigo = NULL,
-                 nombre = ?,
-                 stock_minimo = ?,
-                 ubicacion = ?,
-                 actualizado_por_usuario_id = ?
-             WHERE id = ?`,
-            [
-              String(nombre).trim(),
-              Number(stock_minimo) || 0,
-              ubicacion || null,
-              req.user?.id ?? null,
-              id,
-            ]
-          );
-        }
-      }
-    } else {
-      if (setUnidad) {
-        await pool.query(
-          `UPDATE materiales
-           SET nombre = ?,
-               unidad = ?,
-               stock_minimo = ?,
-               ubicacion = ?,
-               actualizado_por_usuario_id = ?
-           WHERE id = ?`,
-          [
-            String(nombre).trim(),
-            unidadOk,
-            Number(stock_minimo) || 0,
-            ubicacion || null,
-            req.user?.id ?? null,
-            id,
-          ]
-        );
-      } else {
-        await pool.query(
-          `UPDATE materiales
-           SET nombre = ?,
-               stock_minimo = ?,
-               ubicacion = ?,
-               actualizado_por_usuario_id = ?
-           WHERE id = ?`,
-          [
-            String(nombre).trim(),
-            Number(stock_minimo) || 0,
-            ubicacion || null,
-            req.user?.id ?? null,
-            id,
-          ]
-        );
+    const codigoNormalizado = codigo !== undefined ? (String(codigo ?? "").trim() || null) : undefined;
+    if (codigoNormalizado) {
+      const [dup] = await pool.query(
+        `SELECT id FROM materiales WHERE codigo = ? AND id <> ? LIMIT 1`,
+        [codigoNormalizado, id]
+      );
+      if (dup.length) {
+        return res.status(409).json({ ok: false, message: "Ese código ya existe" });
       }
     }
+
+    const sets = [
+      "nombre = ?",
+      "stock_minimo = ?",
+      "ubicacion = ?",
+      "actualizado_por_usuario_id = ?",
+    ];
+    const vals = [
+      String(nombre).trim(),
+      Number(stock_minimo) || 0,
+      ubicacion || null,
+      req.user?.id ?? null,
+    ];
+
+    if (codigo !== undefined) {
+      sets.unshift("codigo = ?");
+      vals.unshift(codigoNormalizado);
+    }
+    if (unidad !== undefined) {
+      sets.push("unidad = ?");
+      vals.push(normalizarUnidad(unidad));
+    }
+    if (tipo_material !== undefined) {
+      sets.push("tipo_material = ?");
+      vals.push(normalizarTipoMaterial(tipo_material));
+    }
+
+    vals.push(id);
+
+    await pool.query(
+      `UPDATE materiales SET ${sets.join(", ")} WHERE id = ?`,
+      vals
+    );
 
     return res.json({ ok: true, message: "Material actualizado" });
   } catch (err) {

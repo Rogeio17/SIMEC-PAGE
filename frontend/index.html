@@ -187,6 +187,14 @@
           </div>
 
           <div class="form-group">
+            <label>Tipo de material</label>
+            <select name="tipo_material">
+              <option value="material">Material</option>
+              <option value="herramienta">Herramienta</option>
+            </select>
+          </div>
+
+          <div class="form-group">
             <label>Ubicación</label>
             <input type="text" name="ubicacion" />
           </div>
@@ -732,6 +740,24 @@
           </div>
 
           <div class="form-group">
+            <label>Unidad</label>
+            <select name="unidad">
+              <option value="pza">Pieza (pza)</option>
+              <option value="kg">Kilogramo (kg)</option>
+              <option value="m">Metro (m)</option>
+              <option value="lt">Litro (lt)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Tipo</label>
+            <select name="tipo_material">
+              <option value="material">Material</option>
+              <option value="herramienta">Herramienta</option>
+            </select>
+          </div>
+
+          <div class="form-group">
             <label>Ubicación</label>
             <input type="text" name="ubicacion" />
           </div>
@@ -1101,6 +1127,88 @@
                 <th>Puesto</th>
                 <th>Teléfono</th>
                 <th>Estado</th>
+                <th>Herramientas activas</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="grid-2" style="margin-top:18px;">
+    <div class="card">
+      <div class="card-header">
+        <h4>Resguardo de herramientas</h4>
+        <p class="small">Asigna herramientas marcadas como herramienta en materiales.</p>
+      </div>
+      <div class="card-body">
+        <form id="formResguardoHerramienta" class="form">
+          <div class="form-group">
+            <label>Empleado</label>
+            <select id="resguardo_empleado_id" required></select>
+          </div>
+          <div class="form-group">
+            <label>Herramienta</label>
+            <select id="resguardo_material_id" required></select>
+          </div>
+          <div class="form-group">
+            <label>Cantidad</label>
+            <input id="resguardo_cantidad" type="number" min="1" step="1" value="1" required />
+          </div>
+          <div class="form-group">
+            <label>Fecha de salida</label>
+            <input id="resguardo_fecha_salida" type="datetime-local" />
+          </div>
+          <div class="form-group" style="grid-column:1 / -1;">
+            <label>Comentario</label>
+            <textarea id="resguardo_comentario" rows="3" placeholder="Ej. Se llevó taladro para obra norte"></textarea>
+          </div>
+          <button class="btn-primary" type="submit">
+            <span class="material-icons">construction</span> Asignar herramienta
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div>
+          <h4>Consulta de resguardos</h4>
+          <p class="small">Visualiza herramientas activas y devoluciones.</p>
+        </div>
+        <button class="btn-secondary" type="button" id="btnRefrescarResguardos">Refrescar</button>
+      </div>
+      <div class="card-body">
+        <div class="grid-2" style="margin-bottom:12px;">
+          <div class="form-group">
+            <label>Empleado</label>
+            <select id="filtro_resguardo_empleado">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="filtro_resguardo_estado">
+              <option value="activo">Activos</option>
+              <option value="devuelto">Devueltos</option>
+              <option value="all">Todos</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="table" id="tabla-resguardos-herramientas">
+            <thead>
+              <tr>
+                <th>Empleado</th>
+                <th>Herramienta</th>
+                <th>Cantidad</th>
+                <th>Salida</th>
+                <th>Devolución</th>
+                <th>Estado</th>
+                <th>Comentario</th>
+                <th>Acción</th>
               </tr>
             </thead>
             <tbody></tbody>
