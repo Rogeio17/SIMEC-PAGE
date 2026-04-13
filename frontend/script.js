@@ -1281,7 +1281,7 @@ async function cargarMovimientosDeProyectoPorEtapa(proyectoId, etapaId) {
       <td>${mv.usuario_nombre || mv.usuario_email || "-"}</td>
       <td>${emp || "-"}</td>
       <td>
-         <buttoon class="btn-danger" onclick="eliminarMovimiento(${mv.id})">Eliminar
+         <button class="btn-danger" onclick="eliminarMovimiento(${mv.id})">Eliminar
          </button>
       </td>
     `;
