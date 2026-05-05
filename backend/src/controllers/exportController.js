@@ -158,6 +158,7 @@ async function queryMovimientos({ proyectoId, etapaId = null }) {
        mv.creado_en,
        u.nombre AS usuario_nombre,
        u.email AS usuario_email,
+       emp.nombre AS empleado_nombre,
        m.precio_unitario,
        (IFNULL(m.precio_unitario,0) * mv.cantidad) AS total
      FROM movimientos mv
@@ -165,12 +166,28 @@ async function queryMovimientos({ proyectoId, etapaId = null }) {
      LEFT JOIN proyecto_etapas e ON e.id = mv.etapa_id
      JOIN materiales m ON m.id = mv.material_id
      LEFT JOIN usuarios u ON u.id = mv.usuario_id
+     LEFT JOIN empleados emp ON emp.id = mv.entregado_a_empleado_id
      WHERE mv.proyecto_id = ? ${whereEtapa}
      ORDER BY mv.creado_en ASC`,
     params
   );
 
   return rows;
+}
+
+function formatFechaExacta(fecha) {
+  if (!fecha) return "-";
+  const d = new Date(fecha);
+  if (Number.isNaN(d.getTime())) return String(fecha);
+
+  return d.toLocaleString("es-MX", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 }
 
 /* ==================== EXPORT PROYECTO (EXCEL) ==================== */
@@ -232,33 +249,20 @@ export async function exportProyectoPdf(req, res) {
     applyHeader();
     doc.on("pageAdded", applyHeader);
 
-    let totalGeneral = 0;
-    rows.forEach(r => (totalGeneral += Number(r.total || 0)));
+    const salidas = rows.filter(r => r.tipo === "SALIDA");
 
     drawSimpleTable(
       doc,
       [
-        { label: "Etapa", w: 18 },
-        { label: "Código", w: 12 },
-        { label: "Material", w: 40 },
-        { label: "Cant", w: 8, align: "right" },
-        { label: "Tipo", w: 10 },
-        { label: "Total", w: 12, align: "right" },
+        { label: "Fecha exacta", w: 24 },
+        { label: "Material", w: 52 },
+        { label: "Entregado a", w: 24 },
       ],
-      rows.map(r => [
-        r.etapa_nombre || "-",
-        r.material_codigo,
+      salidas.map(r => [
+        formatFechaExacta(r.creado_en),
         r.material_nombre,
-        String(r.cantidad ?? ""),
-        r.tipo,
-        `$${Number(r.total || 0).toFixed(2)}`,
+        r.empleado_nombre || "-",
       ])
-    );
-
-    doc.moveDown(0.6);
-    doc.font("Helvetica-Bold").fontSize(11).fillColor("#111").text(
-      `TOTAL GENERAL: $${totalGeneral.toFixed(2)}`,
-      { align: "right" }
     );
 
     doc.end();
@@ -335,31 +339,20 @@ export async function exportEtapaPdf(req, res) {
     applyHeader();
     doc.on("pageAdded", applyHeader);
 
-    let totalGeneral = 0;
-    rows.forEach(r => (totalGeneral += Number(r.total || 0)));
+    const salidas = rows.filter(r => r.tipo === "SALIDA");
 
     drawSimpleTable(
       doc,
       [
-        { label: "Código", w: 14 },
+        { label: "Fecha exacta", w: 24 },
         { label: "Material", w: 52 },
-        { label: "Cant", w: 10, align: "right" },
-        { label: "Tipo", w: 12 },
-        { label: "Total", w: 12, align: "right" },
+        { label: "Entregado a", w: 24 },
       ],
-      rows.map(r => [
-        r.material_codigo,
+      salidas.map(r => [
+        formatFechaExacta(r.creado_en),
         r.material_nombre,
-        String(r.cantidad ?? ""),
-        r.tipo,
-        `$${Number(r.total || 0).toFixed(2)}`,
+        r.empleado_nombre || "-",
       ])
-    );
-
-    doc.moveDown(0.6);
-    doc.font("Helvetica-Bold").fontSize(11).fillColor("#111").text(
-      `TOTAL ETAPA: $${totalGeneral.toFixed(2)}`,
-      { align: "right" }
     );
 
     doc.end();
