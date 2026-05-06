@@ -14,11 +14,12 @@ const SIMEC_RED = "#b91c1c";
 function drawSimecHeader(doc, title, subtitle = "") {
   const left = doc.page.margins.left;
   const right = doc.page.width - doc.page.margins.right;
+  const width = right - left;
 
   // Logo
   try {
     if (fs.existsSync(LOGO_PATH)) {
-      doc.image(LOGO_PATH, left, 18, { width: 140 });
+      doc.image(LOGO_PATH, left, 16, { width: 135 });
     }
   } catch {}
 
@@ -27,8 +28,8 @@ function drawSimecHeader(doc, title, subtitle = "") {
     .font("Helvetica-Bold")
     .fontSize(14)
     .fillColor("#111")
-    .text("SIMEC INGENIERIA", left + 160, 22, {
-      width: right - (left + 160),
+    .text("SIMEC INGENIERIA", left + 155, 20, {
+      width: right - (left + 155),
       align: "right",
     });
 
@@ -36,99 +37,120 @@ function drawSimecHeader(doc, title, subtitle = "") {
     .font("Helvetica")
     .fontSize(9)
     .fillColor("#444")
-    .text("SOLUCIÓN INTEGRAL DE SISTEMAS ELÉCTRICOS", left + 160, 40, {
-      width: right - (left + 160),
+    .text("SOLUCIÓN INTEGRAL DE SISTEMAS ELÉCTRICOS", left + 155, 38, {
+      width: right - (left + 155),
       align: "right",
     });
 
   // Línea roja
-  doc.moveTo(left, 70).lineTo(right, 70).lineWidth(1).strokeColor(SIMEC_RED).stroke();
+  doc.moveTo(left, 66).lineTo(right, 66).lineWidth(1).strokeColor(SIMEC_RED).stroke();
 
-  // Título
+  // Título centrado
   doc
     .font("Helvetica-Bold")
-    .fontSize(13)
+    .fontSize(15)
     .fillColor("#111")
-    .text(title, left, 82);
+    .text(title, left, 78, {
+      width,
+      align: "center",
+    });
 
-  // Subtítulo
+  // Proyecto/etapa resaltado
   if (subtitle) {
-    doc.font("Helvetica").fontSize(10).fillColor("#444").text(subtitle, left, 100);
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(12.5)
+      .fillColor(SIMEC_RED)
+      .text(subtitle, left, 99, {
+        width,
+        align: "center",
+      });
   }
 
-
+  // Meta
   const now = new Date();
   doc
     .font("Helvetica")
-    .fontSize(9)
+    .fontSize(8.5)
     .fillColor("#666")
     .text(
       `Fecha: ${now.toLocaleDateString()}  Hora: ${now.toLocaleTimeString()}`,
       left,
-      subtitle ? 118 : 100
+      subtitle ? 122 : 102,
+      { width, align: "center" }
     );
 
   doc.fillColor("#111");
-  doc.y = subtitle ? 138 : 120;
+  doc.y = subtitle ? 145 : 125;
 }
 
-
+/**
+ * Tabla compacta estilo "Opción C"
+ * columns: [{label, w, align?}]
+ * rows: array de arrays (mismo orden que columns)
+ */
 function drawSimpleTable(doc, columns, rows) {
   const left = doc.page.margins.left;
   const right = doc.page.width - doc.page.margins.right;
   const width = right - left;
 
-  const headerH = 16; 
-  const rowH = 14;    
+  const headerH = 18;
+  const rowH = 17;
+  const fontSize = 9.5;
 
   const totalW = columns.reduce((s, c) => s + c.w, 0);
   const colW = columns.map(c => (c.w / totalW) * width);
 
-  
-  doc.rect(left, doc.y, width, headerH).fill(SIMEC_RED);
-  doc.fillColor("#fff").font("Helvetica-Bold").fontSize(9);
+  const drawHeader = () => {
+    doc.rect(left, doc.y, width, headerH).fill(SIMEC_RED);
+    doc.fillColor("#fff").font("Helvetica-Bold").fontSize(fontSize);
 
-  let x = left;
-  columns.forEach((c, i) => {
-    doc.text(c.label, x + 4, doc.y + 4, {
-      width: colW[i] - 8,
-      align: c.align || "left",
+    let x = left;
+    columns.forEach((c, i) => {
+      doc.text(c.label, x + 5, doc.y + 4, {
+        width: colW[i] - 10,
+        height: headerH - 5,
+        align: c.align || "left",
+        lineBreak: false,
+      });
+      x += colW[i];
     });
-    x += colW[i];
-  });
 
-  doc.y += headerH;
-  doc.fillColor("#111").font("Helvetica").fontSize(9);
+    doc.y += headerH;
+    doc.fillColor("#111").font("Helvetica").fontSize(fontSize);
+  };
 
-  
+  drawHeader();
+
   rows.forEach(r => {
-    
     if (doc.y + rowH > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
-     
+      drawHeader();
     }
 
     let xx = left;
     r.forEach((val, i) => {
-      doc.text(String(val ?? ""), xx + 4, doc.y + 2.5, {
-        width: colW[i] - 8,
+      doc.text(String(val ?? ""), xx + 5, doc.y + 3.5, {
+        width: colW[i] - 10,
+        height: rowH - 5,
         align: columns[i].align || "left",
+        lineBreak: false,
+        ellipsis: true,
       });
       xx += colW[i];
     });
 
-   
     doc
       .moveTo(left, doc.y + rowH)
       .lineTo(right, doc.y + rowH)
-      .lineWidth(0.5)
+      .lineWidth(0.4)
       .strokeColor("#e5e7eb")
       .stroke();
 
     doc.y += rowH;
   });
 
-  doc.moveDown(0.6);
+  doc.moveDown(0.4);
 }
 
 /* ==================== HELPERS ==================== */
@@ -176,15 +198,53 @@ function formatFechaExacta(fecha) {
   const d = new Date(fecha);
   if (Number.isNaN(d.getTime())) return String(fecha);
 
-  return d.toLocaleString("es-MX", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
+  const pad = n => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function formatCantidad(cantidad) {
+  const n = Number(cantidad);
+  if (Number.isNaN(n)) return cantidad ?? "-";
+  return Number.isInteger(n) ? String(n) : String(n);
+}
+
+function setupSalidasSheet(sheet) {
+  sheet.columns = [
+    { header: "Fecha exacta", key: "fecha_exacta", width: 24 },
+    { header: "Material", key: "material_nombre", width: 42 },
+    { header: "Cantidad", key: "cantidad", width: 12 },
+    { header: "Entregado a", key: "empleado_nombre", width: 26 },
+  ];
+
+  sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+  sheet.getRow(1).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFB91C1C" },
+  };
+
+  sheet.columns.forEach(col => {
+    col.alignment = { vertical: "middle", wrapText: false };
   });
 }
+
+function buildSalidasRows(rows) {
+  return rows
+    .filter(r => r.tipo === "SALIDA")
+    .map(r => ({
+      fecha_exacta: formatFechaExacta(r.creado_en),
+      material_nombre: r.material_nombre,
+      cantidad: formatCantidad(r.cantidad),
+      empleado_nombre: r.empleado_nombre || "-",
+    }));
+}
+
+const SALIDAS_PDF_COLUMNS = [
+  { label: "Fecha exacta", w: 27 },
+  { label: "Material", w: 38 },
+  { label: "Cantidad", w: 10, align: "center" },
+  { label: "Entregado a", w: 25 },
+];
 
 /* ==================== EXPORT PROYECTO (EXCEL) ==================== */
 export async function exportProyectoExcel(req, res) {
@@ -193,24 +253,10 @@ export async function exportProyectoExcel(req, res) {
     const rows = await queryMovimientos({ proyectoId });
 
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("Proyecto");
+    const sheet = workbook.addWorksheet("Salidas");
 
-    sheet.columns = [
-      { header: "Proyecto", key: "proyecto_nombre", width: 25 },
-      { header: "Etapa", key: "etapa_nombre", width: 20 },
-      { header: "Código", key: "material_codigo", width: 15 },
-      { header: "Material", key: "material_nombre", width: 30 },
-      { header: "Cantidad", key: "cantidad", width: 10 },
-      { header: "Tipo", key: "tipo", width: 10 },
-      { header: "Precio unitario", key: "precio_unitario", width: 15 },
-      { header: "Total", key: "total", width: 15 },
-      { header: "Usuario", key: "usuario_nombre", width: 20 },
-      { header: "Email", key: "usuario_email", width: 25 },
-      { header: "Fecha", key: "creado_en", width: 22 },
-      { header: "Comentario", key: "comentario", width: 30 },
-    ];
-
-    rows.forEach(r => sheet.addRow(r));
+    setupSalidasSheet(sheet);
+    buildSalidasRows(rows).forEach(r => sheet.addRow(r));
 
     res.setHeader(
       "Content-Type",
@@ -241,26 +287,21 @@ export async function exportProyectoPdf(req, res) {
     const proyectoClave = rows[0]?.proyecto_clave ? `(${rows[0].proyecto_clave})` : "";
 
     const applyHeader = () =>
-      drawSimecHeader(doc, "Reporte de Proyecto", `${proyectoNombre} ${proyectoClave}`.trim());
+      drawSimecHeader(doc, "Reporte de Salidas", `${proyectoNombre} ${proyectoClave}`.trim());
     applyHeader();
     doc.on("pageAdded", applyHeader);
 
-    const salidas = rows.filter(r => r.tipo === "SALIDA");
+    const salidas = buildSalidasRows(rows);
 
     drawSimpleTable(
       doc,
-      [
-  { label: "Fecha exacta", w: 20 },
-  { label: "Material", w: 40 },
-  { label: "Cantidad", w: 15, align: "right" },
-  { label: "Entregado a", w: 25 },
-],
+      SALIDAS_PDF_COLUMNS,
       salidas.map(r => [
-  formatFechaExacta(r.creado_en),
-  r.material_nombre,
-  r.cantidad,
-  r.empleado_nombre || "-",
-])
+        r.fecha_exacta,
+        r.material_nombre,
+        r.cantidad,
+        r.empleado_nombre,
+      ])
     );
 
     doc.end();
@@ -278,24 +319,10 @@ export async function exportEtapaExcel(req, res) {
     const rows = await queryMovimientos({ proyectoId, etapaId });
 
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("Etapa");
+    const sheet = workbook.addWorksheet("Salidas");
 
-    sheet.columns = [
-      { header: "Proyecto", key: "proyecto_nombre", width: 25 },
-      { header: "Etapa", key: "etapa_nombre", width: 20 },
-      { header: "Código", key: "material_codigo", width: 15 },
-      { header: "Material", key: "material_nombre", width: 30 },
-      { header: "Cantidad", key: "cantidad", width: 10 },
-      { header: "Tipo", key: "tipo", width: 10 },
-      { header: "Precio unitario", key: "precio_unitario", width: 15 },
-      { header: "Total", key: "total", width: 15 },
-      { header: "Usuario", key: "usuario_nombre", width: 20 },
-      { header: "Email", key: "usuario_email", width: 25 },
-      { header: "Fecha", key: "creado_en", width: 22 },
-      { header: "Comentario", key: "comentario", width: 30 },
-    ];
-
-    rows.forEach(r => sheet.addRow(r));
+    setupSalidasSheet(sheet);
+    buildSalidasRows(rows).forEach(r => sheet.addRow(r));
 
     res.setHeader(
       "Content-Type",
@@ -333,23 +360,20 @@ export async function exportEtapaPdf(req, res) {
     const etapaNombre = rows[0]?.etapa_nombre || `Etapa #${etapaId}`;
 
     const applyHeader = () =>
-      drawSimecHeader(doc, "Reporte de Etapa", `${proyectoNombre} — ${etapaNombre}`);
+      drawSimecHeader(doc, "Reporte de Salidas", `${proyectoNombre} — ${etapaNombre}`);
     applyHeader();
     doc.on("pageAdded", applyHeader);
 
-    const salidas = rows.filter(r => r.tipo === "SALIDA");
+    const salidas = buildSalidasRows(rows);
 
     drawSimpleTable(
       doc,
-      [
-        { label: "Fecha exacta", w: 24 },
-        { label: "Material", w: 52 },
-        { label: "Entregado a", w: 24 },
-      ],
+      SALIDAS_PDF_COLUMNS,
       salidas.map(r => [
-        formatFechaExacta(r.creado_en),
+        r.fecha_exacta,
         r.material_nombre,
-        r.empleado_nombre || "-",
+        r.cantidad,
+        r.empleado_nombre,
       ])
     );
 
