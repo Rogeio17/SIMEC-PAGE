@@ -20,7 +20,7 @@ function normalizarTipo(v) {
 
 export async function listarVehiculos(_req, res) {
   try {
-    const [rows] = await pool.query(`
+    const [rows] = await pool.query(` 
       SELECT
         v.id,
         v.codigo,

@@ -67,96 +67,128 @@ function drawSimpleTable(doc, columns, rows) {
   const right = doc.page.width - doc.page.margins.right;
   const width = right - left;
 
+  // Renglones compactos: todo queda dentro de la misma raya/fila.
   const headerH = 16;
-  const rowH = 14;
+  const rowH = 15;
+  const fontSize = 9.2;
+  const cellPadX = 4;
+  const cellPadY = 3;
 
   const totalW = columns.reduce((s, c) => s + c.w, 0);
   const colW = columns.map(c => (c.w / totalW) * width);
 
-  // Header
-  doc.rect(left, doc.y, width, headerH).fill(SIMEC_RED);
-  doc.fillColor("#fff").font("Helvetica-Bold").fontSize(9);
+  const drawHeader = () => {
+    const headerY = doc.y;
+    doc.rect(left, headerY, width, headerH).fill(SIMEC_RED);
+    doc.fillColor("#fff").font("Helvetica-Bold").fontSize(fontSize);
 
-  let x = left;
-  columns.forEach((c, i) => {
-    doc.text(c.label, x + 4, doc.y + 4, {
-      width: colW[i] - 8,
-      align: c.align || "left",
+    let x = left;
+    columns.forEach((c, i) => {
+      doc.text(c.label, x + cellPadX, headerY + 3.5, {
+        width: colW[i] - cellPadX * 2,
+        height: headerH - 4,
+        align: c.align || "left",
+        lineBreak: false,
+        ellipsis: true,
+      });
+      // PDFKit mueve doc.y después de text(); lo regresamos para que no descuadre columnas.
+      doc.y = headerY;
+      x += colW[i];
     });
-    x += colW[i];
-  });
 
-  doc.y += headerH;
-  doc.fillColor("#111").font("Helvetica").fontSize(9);
+    doc.y = headerY + headerH;
+    doc.fillColor("#111").font("Helvetica").fontSize(fontSize);
+  };
 
-  // Rows
+  drawHeader();
+
   rows.forEach(r => {
     if (doc.y + rowH > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
+      drawHeader();
     }
+
+    const rowY = doc.y;
+
+    // Renglón completo, tipo hoja con rayas.
+    doc
+      .rect(left, rowY, width, rowH)
+      .lineWidth(0.35)
+      .strokeColor("#d1d5db")
+      .stroke();
 
     let xx = left;
     r.forEach((val, i) => {
-      doc.text(String(val ?? ""), xx + 4, doc.y + 1, {
-        width: colW[i] - 8,
+      // Separadores verticales suaves para que todo quede dentro de su columna.
+      if (i > 0) {
+        doc
+          .moveTo(xx, rowY)
+          .lineTo(xx, rowY + rowH)
+          .lineWidth(0.25)
+          .strokeColor("#e5e7eb")
+          .stroke();
+      }
+
+      doc.fillColor("#111").font("Helvetica").fontSize(fontSize);
+      doc.text(String(val ?? ""), xx + cellPadX, rowY + cellPadY, {
+        width: colW[i] - cellPadX * 2,
+        height: rowH - cellPadY,
         align: columns[i].align || "left",
+        lineBreak: false,
+        ellipsis: true,
       });
+      // Mantiene todas las celdas al mismo nivel del renglón.
+      doc.y = rowY;
       xx += colW[i];
     });
 
-    doc
-      .moveTo(left, doc.y + rowH)
-      .lineTo(right, doc.y + rowH)
-      .lineWidth(0.5)
-      .strokeColor("#e5e7eb")
-      .stroke();
-
-    doc.y += rowH;
+    doc.y = rowY + rowH;
   });
 
-  doc.moveDown(0.6);
+  doc.moveDown(0.25);
+}
+
+function setupMaterialesSheet(sheet) {
+  sheet.columns = [
+    { header: "Código", key: "codigo", width: 18 },
+    { header: "Material", key: "nombre", width: 42 },
+    { header: "Stock", key: "stock_actual", width: 12 },
+    { header: "Ubicación", key: "ubicacion", width: 24 },
+  ];
+
+  sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+  sheet.getRow(1).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFB91C1C" },
+  };
+
+  sheet.columns.forEach(col => {
+    col.alignment = { vertical: "middle", wrapText: false };
+  });
 }
 
 /* ==================== EXPORT MATERIALES (EXCEL) ==================== */
 export async function exportMaterialesExcel(_req, res) {
   try {
     const [rows] = await pool.query(
-      `SELECT
-         m.id,
-         m.codigo,
-         m.nombre,
-         m.stock_actual,
-         m.stock_minimo,
-         m.ubicacion,
-         m.nombre AS proveedor_nombre,
-         m.ticket_numero,
-         m.requiere_protocolo,
-         m.protocolo_texto,
-         m.precio_unitario
-       FROM materiales m
-       LEFT JOIN proveedores p ON p.id = m.proveedor_id
-       WHERE m.activo = 1
-       ORDER BY m.id DESC`
+      `SELECT codigo, nombre, stock_actual, ubicacion
+       FROM materiales
+       WHERE activo = 1
+       ORDER BY id DESC`
     );
 
     const wb = new ExcelJS.Workbook();
     const sh = wb.addWorksheet("Materiales");
 
-    sh.columns = [
-      { header: "ID", key: "id", width: 8 },
-      { header: "Código", key: "codigo", width: 15 },
-      { header: "Nombre", key: "nombre", width: 30 },
-      { header: "Stock", key: "stock_actual", width: 10 },
-      { header: "Stock mínimo", key: "stock_minimo", width: 12 },
-      { header: "Ubicación", key: "ubicacion", width: 15 },
-      { header: "Proveedor", key: "proveedor_nombre", width: 20 },
-      { header: "Ticket", key: "ticket_numero", width: 15 },
-      { header: "Req. Protocolo", key: "requiere_protocolo", width: 14 },
-      { header: "Protocolo", key: "protocolo_texto", width: 25 },
-      { header: "Precio unitario", key: "precio_unitario", width: 14 },
-    ];
+    setupMaterialesSheet(sh);
 
-    rows.forEach(r => sh.addRow(r));
+    rows.forEach(r => sh.addRow({
+      codigo: r.codigo,
+      nombre: r.nombre,
+      stock_actual: String(r.stock_actual ?? 0),
+      ubicacion: r.ubicacion || "-",
+    }));
 
     res.setHeader(
       "Content-Type",
@@ -196,7 +228,7 @@ export async function exportMaterialesPdf(_req, res) {
       [
         { label: "Código", w: 18 },
         { label: "Material", w: 52 },
-        { label: "Cantidad", w: 15, align: "right" },
+        { label: "Stock", w: 15, align: "right" },
         { label: "Ubicación", w: 15 },
       ],
       rows.map(r => [
