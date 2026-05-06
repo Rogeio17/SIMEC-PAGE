@@ -5,6 +5,25 @@ import path from "path";
 import { fileURLToPath } from "url";
 import pool from "../config/db.js";
 
+function normalizarUnidadMaterial(unidad) {
+  const u = String(unidad || "pza").trim();
+  const key = u.toLowerCase();
+  if (["m", "mt", "mts", "metro", "metros"].includes(key)) return "M";
+  if (["kg", "kgs", "kilogramo", "kilogramos"].includes(key)) return "kg";
+  if (["l", "lt", "lts", "litro", "litros"].includes(key)) return "Lt";
+  return "pza";
+}
+
+function formatCantidadMaterial(cantidad, unidad) {
+  const u = normalizarUnidadMaterial(unidad);
+  const n = Number(cantidad);
+  if (!Number.isFinite(n)) return `${cantidad ?? 0} ${u}`;
+  const txt = ["M", "kg", "Lt"].includes(u)
+    ? n.toFixed(2)
+    : (Number.isInteger(n) ? String(n) : String(n).replace(/\.00$/, "").replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, ""));
+  return `${txt} ${u}`;
+}
+
 /* ==================== PDF TEMPLATE (LOGO + HEADER) ==================== */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -192,6 +211,7 @@ async function queryMovimientos({ proyectoId, etapaId = null }) {
        e.nombre AS etapa_nombre,
        m.codigo AS material_codigo,
        m.nombre AS material_nombre,
+       m.unidad AS material_unidad,
        mv.cantidad,
        mv.tipo,
        mv.comentario,
@@ -224,10 +244,8 @@ function formatFechaExacta(fecha) {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-function formatCantidad(cantidad) {
-  const n = Number(cantidad);
-  if (Number.isNaN(n)) return cantidad ?? "-";
-  return Number.isInteger(n) ? String(n) : String(n);
+function formatCantidad(cantidad, unidad) {
+  return formatCantidadMaterial(cantidad, unidad);
 }
 
 function setupSalidasSheet(sheet) {
@@ -256,7 +274,7 @@ function buildSalidasRows(rows) {
     .map(r => ({
       fecha_exacta: formatFechaExacta(r.creado_en),
       material_nombre: r.material_nombre,
-      cantidad: formatCantidad(r.cantidad),
+      cantidad: formatCantidad(r.cantidad, r.material_unidad),
       empleado_nombre: r.empleado_nombre || "-",
     }));
 }

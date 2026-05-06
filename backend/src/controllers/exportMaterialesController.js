@@ -5,6 +5,25 @@ import path from "path";
 import { fileURLToPath } from "url";
 import pool from "../config/db.js";
 
+function normalizarUnidadMaterial(unidad) {
+  const u = String(unidad || "pza").trim();
+  const key = u.toLowerCase();
+  if (["m", "mt", "mts", "metro", "metros"].includes(key)) return "M";
+  if (["kg", "kgs", "kilogramo", "kilogramos"].includes(key)) return "kg";
+  if (["l", "lt", "lts", "litro", "litros"].includes(key)) return "Lt";
+  return "pza";
+}
+
+function formatCantidadMaterial(cantidad, unidad) {
+  const u = normalizarUnidadMaterial(unidad);
+  const n = Number(cantidad);
+  if (!Number.isFinite(n)) return `${cantidad ?? 0} ${u}`;
+  const txt = ["M", "kg", "Lt"].includes(u)
+    ? n.toFixed(2)
+    : (Number.isInteger(n) ? String(n) : String(n).replace(/\.00$/, "").replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, ""));
+  return `${txt} ${u}`;
+}
+
 /* ==================== PDF TEMPLATE (LOGO + HEADER) ==================== */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -172,7 +191,7 @@ function setupMaterialesSheet(sheet) {
 export async function exportMaterialesExcel(_req, res) {
   try {
     const [rows] = await pool.query(
-      `SELECT codigo, nombre, stock_actual, ubicacion
+      `SELECT codigo, nombre, unidad, stock_actual, ubicacion
        FROM materiales
        WHERE activo = 1
        ORDER BY id DESC`
@@ -186,7 +205,7 @@ export async function exportMaterialesExcel(_req, res) {
     rows.forEach(r => sh.addRow({
       codigo: r.codigo,
       nombre: r.nombre,
-      stock_actual: String(r.stock_actual ?? 0),
+      stock_actual: formatCantidadMaterial(r.stock_actual ?? 0, r.unidad),
       ubicacion: r.ubicacion || "-",
     }));
 
@@ -208,7 +227,7 @@ export async function exportMaterialesExcel(_req, res) {
 export async function exportMaterialesPdf(_req, res) {
   try {
     const [rows] = await pool.query(
-      `SELECT codigo, nombre, stock_actual, ubicacion
+      `SELECT codigo, nombre, unidad, stock_actual, ubicacion
        FROM materiales
        WHERE activo = 1
        ORDER BY id DESC`
@@ -234,7 +253,7 @@ export async function exportMaterialesPdf(_req, res) {
       rows.map(r => [
         r.codigo,
         r.nombre,
-        String(r.stock_actual ?? 0),
+        formatCantidadMaterial(r.stock_actual ?? 0, r.unidad),
         r.ubicacion || "-",
       ])
     );
