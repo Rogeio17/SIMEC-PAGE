@@ -2429,9 +2429,20 @@ let vehiculoSeleccionadoId = null;
 
 function formatearFechaVehiculo(fecha) {
   if (!fecha) return "—";
-  const d = new Date(`${fecha}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return fecha;
-  return d.toLocaleDateString();
+  const texto = String(fecha);
+  const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, anio, mes, dia] = match;
+    return `${dia}/${mes}/${anio}`;
+  }
+  const d = new Date(texto);
+  if (Number.isNaN(d.getTime())) return texto;
+  return d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function mostrarFormVehiculo(mostrar = true) {
+  const panel = document.getElementById("vehiculo-form-panel");
+  if (panel) panel.style.display = mostrar ? "block" : "none";
 }
 
 function sumarMesesFecha(fechaStr, meses) {
@@ -2455,6 +2466,17 @@ function limpiarFormVehiculo() {
   if (id) id.value = "";
 }
 
+function prepararNuevoVehiculo() {
+  vehiculoSeleccionadoId = null;
+  limpiarFormVehiculo();
+  mostrarFormVehiculo(true);
+  const info = document.getElementById("info-vehiculo-seleccionado");
+  if (info) info.textContent = "Nuevo vehículo";
+  document.querySelectorAll(".vehiculo-item").forEach(el => el.classList.remove("activo-item"));
+  const tbody = document.querySelector("#tabla-mantenimientos-vehiculo tbody");
+  if (tbody) tbody.innerHTML = `<tr><td colspan="7">Guarda o selecciona un vehículo para ver mantenimientos.</td></tr>`;
+}
+
 function setVehiculoSeleccionado(id) {
   vehiculoSeleccionadoId = id;
   const actual = vehiculosCache.find(v => Number(v.id) === Number(id)) || null;
@@ -2464,6 +2486,11 @@ function setVehiculoSeleccionado(id) {
   document.querySelectorAll(".vehiculo-item").forEach(el => {
     el.classList.toggle("activo-item", Number(el.dataset.id) === Number(id));
   });
+
+  if (actual) {
+    llenarFormVehiculo(actual);
+    mostrarFormVehiculo(true);
+  }
 
   cargarMantenimientosVehiculo(id);
 }
@@ -2505,13 +2532,13 @@ function renderVehiculos(lista = []) {
         <div class="vehiculo-badge">${escapeHtml(v.estado || "activo")}</div>
       </div>
       <div class="vehiculo-item-meta">
-        <div><strong>${escapeHtml(v.proximo_tipo || "Sin mantenimiento")}</strong></div>
-        <div>Próximo: ${formatearFechaVehiculo(v.proximo_mantenimiento)}</div>
+        <div><strong>${escapeHtml(v.proximo_tipo || "Cambio de aceite")}</strong></div>
+        <div class="vehiculo-fecha-proximo">${formatearFechaVehiculo(v.proximo_mantenimiento)}</div>
+        <div class="vehiculo-fecha-label">Siguiente cambio de aceite</div>
       </div>
     `;
     div.addEventListener("click", () => {
       setVehiculoSeleccionado(v.id);
-      llenarFormVehiculo(v);
     });
     cont.appendChild(div);
   });
@@ -2550,9 +2577,7 @@ async function cargarVehiculos() {
   renderVehiculos(vehiculosCache);
   await cargarAlertasVehiculos();
 
-  if (!vehiculoSeleccionadoId && vehiculosCache.length) {
-    setVehiculoSeleccionado(vehiculosCache[0].id);
-  } else if (vehiculoSeleccionadoId) {
+  if (vehiculoSeleccionadoId) {
     const existe = vehiculosCache.some(v => Number(v.id) === Number(vehiculoSeleccionadoId));
     if (existe) setVehiculoSeleccionado(vehiculoSeleccionadoId);
   }
@@ -2582,8 +2607,13 @@ async function guardarVehiculo(e) {
   const data = await res.json();
   if (!data.ok) return alert(data.message || "Error al guardar vehículo");
 
-  limpiarFormVehiculo();
   await cargarVehiculos();
+  if (id) {
+    setVehiculoSeleccionado(id);
+  } else {
+    limpiarFormVehiculo();
+    mostrarFormVehiculo(false);
+  }
   alert(id ? "Vehículo actualizado" : "Vehículo registrado");
 }
 
@@ -2648,6 +2678,7 @@ async function guardarMantenimientoVehiculo(e) {
 
 function initVehiculosUI() {
   document.getElementById("form-vehiculo")?.addEventListener("submit", guardarVehiculo);
+  document.getElementById("btn-agregar-vehiculo")?.addEventListener("click", prepararNuevoVehiculo);
   document.getElementById("btn-limpiar-vehiculo")?.addEventListener("click", limpiarFormVehiculo);
   document.getElementById("form-mantenimiento-vehiculo")?.addEventListener("submit", guardarMantenimientoVehiculo);
 

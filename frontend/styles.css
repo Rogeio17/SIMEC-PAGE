@@ -452,6 +452,8 @@ grid-template-columns:1fr;
 .vehiculo-item-titulo { font-weight: 700; font-size: 15px; }
 .vehiculo-item-sub { color: #5f6368; font-size: 13px; margin-top: 4px; }
 .vehiculo-item-meta { text-align: right; font-size: 13px; color: #444; min-width: 180px; }
+.vehiculo-fecha-proximo { font-size: 17px; font-weight: 800; color: #1a73e8; margin-top: 4px; }
+.vehiculo-fecha-label { font-size: 12px; color: #5f6368; margin-top: 2px; }
 .vehiculo-badge {
   display: inline-flex;
   align-items: center;

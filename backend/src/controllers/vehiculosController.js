@@ -1,7 +1,7 @@
 import pool from "../config/db.js";
 
 const ESTADOS_VEHICULO = new Set(["activo", "en taller", "fuera de servicio"]);
-const TIPOS_MANTENIMIENTO = new Set(["cambio de aceite", "cambio de filtros", "frenos", "seguro"]);
+const TIPOS_MANTENIMIENTO = new Set(["cambio de aceite", "frenos", "reparaciones"]);
 
 function toNull(v) {
   const x = (v ?? "").toString().trim();
@@ -18,7 +18,7 @@ function normalizarTipo(v) {
   return TIPOS_MANTENIMIENTO.has(tipo) ? tipo : null;
 }
 
-export async function listarVehiculos(_req, res) {
+export async function listarVehiculos(_req, res) { 
   try {
     const [rows] = await pool.query(` 
       SELECT
@@ -35,6 +35,7 @@ export async function listarVehiculos(_req, res) {
           SELECT vm.fecha_proximo
           FROM vehiculo_mantenimientos vm
           WHERE vm.vehiculo_id = v.id
+            AND vm.tipo_mantenimiento = 'cambio de aceite'
           ORDER BY vm.fecha_proximo ASC, vm.id DESC
           LIMIT 1
         ) AS proximo_mantenimiento,
@@ -42,6 +43,7 @@ export async function listarVehiculos(_req, res) {
           SELECT vm.tipo_mantenimiento
           FROM vehiculo_mantenimientos vm
           WHERE vm.vehiculo_id = v.id
+            AND vm.tipo_mantenimiento = 'cambio de aceite'
           ORDER BY vm.fecha_proximo ASC, vm.id DESC
           LIMIT 1
         ) AS proximo_tipo

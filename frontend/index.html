@@ -534,6 +534,10 @@
             <div class="card-header">
               <h4>Vehículos registrados</h4>
               <p class="small">Selecciona una unidad para ver su historial y próximos servicios.</p>
+              <button class="btn-primary" type="button" id="btn-agregar-vehiculo">
+                <span class="material-icons">add</span>
+                Agregar nuevo vehículo
+              </button>
             </div>
             <div class="card-body">
               <div id="vehiculos-alertas" class="vehiculos-alertas-box"></div>
@@ -547,7 +551,7 @@
               <p class="small">Vehículo seleccionado: <span id="info-vehiculo-seleccionado">Ninguno</span></p>
             </div>
 
-            <div class="card-body">
+            <div class="card-body vehiculo-form-panel" id="vehiculo-form-panel" style="display:none;">
               <form id="form-vehiculo" class="form">
                 <input type="hidden" id="vehiculo_id" name="vehiculo_id" />
                 <div class="form-group">
@@ -606,9 +610,8 @@
                   <label>Tipo de mantenimiento *</label>
                   <select name="tipo_mantenimiento" required>
                     <option value="cambio de aceite">Cambio de aceite</option>
-                    <option value="cambio de filtros">Cambio de filtros</option>
                     <option value="frenos">Frenos</option>
-                    <option value="seguro">Seguro</option>
+                    <option value="reparaciones">Reparaciones</option>
                   </select>
                 </div>
                 <div class="form-group">
