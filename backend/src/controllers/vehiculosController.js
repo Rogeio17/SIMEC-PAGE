@@ -65,7 +65,7 @@ export async function listarVehiculos(_req, res) {
           FROM vehiculo_mantenimientos vm
           WHERE vm.vehiculo_id = v.id
             AND vm.tipo_mantenimiento = 'cambio de aceite'
-          ORDER BY vm.fecha_proximo ASC, vm.id DESC
+          ORDER BY vm.fecha_realizado DESC, vm.id DESC
           LIMIT 1
         ) AS proximo_mantenimiento,
         (
@@ -73,7 +73,7 @@ export async function listarVehiculos(_req, res) {
           FROM vehiculo_mantenimientos vm
           WHERE vm.vehiculo_id = v.id
             AND vm.tipo_mantenimiento = 'cambio de aceite'
-          ORDER BY vm.fecha_proximo ASC, vm.id DESC
+          ORDER BY vm.fecha_realizado DESC, vm.id DESC
           LIMIT 1
         ) AS proximo_tipo
       FROM vehiculos v
@@ -314,13 +314,11 @@ export async function listarAlertasVehiculos(_req, res) {
         DATEDIFF(vm.fecha_proximo, CURDATE()) AS dias_restantes
       FROM vehiculo_mantenimientos vm
       INNER JOIN (
-        SELECT vehiculo_id, tipo_mantenimiento, MIN(fecha_proximo) AS fecha_proximo_min
+        SELECT vehiculo_id, tipo_mantenimiento, MAX(id) AS ultimo_id
         FROM vehiculo_mantenimientos
         GROUP BY vehiculo_id, tipo_mantenimiento
       ) ult
-        ON ult.vehiculo_id = vm.vehiculo_id
-       AND ult.tipo_mantenimiento = vm.tipo_mantenimiento
-       AND ult.fecha_proximo_min = vm.fecha_proximo
+        ON ult.ultimo_id = vm.id
       INNER JOIN vehiculos v ON v.id = vm.vehiculo_id
       WHERE vm.fecha_proximo <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
       ORDER BY vm.fecha_proximo ASC, v.codigo ASC
