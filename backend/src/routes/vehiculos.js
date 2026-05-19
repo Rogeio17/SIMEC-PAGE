@@ -7,6 +7,7 @@ import {
   listarMantenimientos,
   crearMantenimiento,
   listarAlertasVehiculos,
+  exportarReporteVehiculosPdf,
 } from "../controllers/vehiculosController.js";
 
 const router = Router();
@@ -17,6 +18,7 @@ router.post("/", requireRole("admin"), crearVehiculo);
 router.put("/:id", requireRole("admin"), actualizarVehiculo);
 
 router.get("/alertas", listarAlertasVehiculos);
+router.get("/reporte/pdf", exportarReporteVehiculosPdf);
 router.get("/:vehiculoId/mantenimientos", listarMantenimientos);
 router.post("/:vehiculoId/mantenimientos", requireRole("admin"), crearMantenimiento);
 

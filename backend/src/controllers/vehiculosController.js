@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import PDFDocument from "pdfkit";
 
 const ESTADOS_VEHICULO = new Set(["activo", "en taller", "fuera de servicio"]);
 const TIPOS_MANTENIMIENTO = new Set(["cambio de aceite", "frenos", "reparaciones"]);
@@ -18,8 +19,35 @@ function normalizarTipo(v) {
   return TIPOS_MANTENIMIENTO.has(tipo) ? tipo : null;
 }
 
+let conductorColumnChecked = false;
+async function asegurarCampoConductor() {
+  if (conductorColumnChecked) return;
+  const [cols] = await pool.query(
+    `SELECT COLUMN_NAME
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'vehiculos'
+       AND COLUMN_NAME = 'conductor'
+     LIMIT 1`
+  );
+  if (!cols.length) {
+    await pool.query(`ALTER TABLE vehiculos ADD COLUMN conductor VARCHAR(150) NULL AFTER modelo`);
+  }
+  conductorColumnChecked = true;
+}
+
+function formatoFecha(fecha) {
+  if (!fecha) return "—";
+  const texto = String(fecha);
+  const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+  const d = new Date(texto);
+  return Number.isNaN(d.getTime()) ? texto : d.toLocaleDateString("es-MX");
+}
+
 export async function listarVehiculos(_req, res) { 
   try {
+    await asegurarCampoConductor();
     const [rows] = await pool.query(` 
       SELECT
         v.id,
@@ -27,6 +55,7 @@ export async function listarVehiculos(_req, res) {
         v.placas,
         v.marca,
         v.modelo,
+        v.conductor,
         v.anio,
         v.color,
         v.numero_serie,
@@ -59,10 +88,12 @@ export async function listarVehiculos(_req, res) {
 
 export async function crearVehiculo(req, res) {
   try {
+    await asegurarCampoConductor();
     const codigo = toNull(req.body.codigo);
     const placas = toNull(req.body.placas);
     const marca = toNull(req.body.marca);
     const modelo = toNull(req.body.modelo);
+    const conductor = toNull(req.body.conductor);
     const anio = req.body.anio ? Number(req.body.anio) : null;
     const color = toNull(req.body.color);
     const numero_serie = toNull(req.body.numero_serie);
@@ -74,9 +105,9 @@ export async function crearVehiculo(req, res) {
 
     await pool.query(
       `INSERT INTO vehiculos
-      (codigo, placas, marca, modelo, anio, color, numero_serie, estado, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [codigo, placas, marca, modelo, anio, color, numero_serie, estado]
+      (codigo, placas, marca, modelo, conductor, anio, color, numero_serie, estado, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [codigo, placas, marca, modelo, conductor, anio, color, numero_serie, estado]
     );
 
     return res.json({ ok: true, message: "Vehículo registrado" });
@@ -88,6 +119,7 @@ export async function crearVehiculo(req, res) {
 
 export async function actualizarVehiculo(req, res) {
   try {
+    await asegurarCampoConductor();
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) return res.status(400).json({ ok: false, message: "ID inválido" });
 
@@ -95,6 +127,7 @@ export async function actualizarVehiculo(req, res) {
     const placas = toNull(req.body.placas);
     const marca = toNull(req.body.marca);
     const modelo = toNull(req.body.modelo);
+    const conductor = toNull(req.body.conductor);
     const anio = req.body.anio ? Number(req.body.anio) : null;
     const color = toNull(req.body.color);
     const numero_serie = toNull(req.body.numero_serie);
@@ -106,9 +139,9 @@ export async function actualizarVehiculo(req, res) {
 
     await pool.query(
       `UPDATE vehiculos
-       SET codigo = ?, placas = ?, marca = ?, modelo = ?, anio = ?, color = ?, numero_serie = ?, estado = ?
+       SET codigo = ?, placas = ?, marca = ?, modelo = ?, conductor = ?, anio = ?, color = ?, numero_serie = ?, estado = ?
        WHERE id = ?`,
-      [codigo, placas, marca, modelo, anio, color, numero_serie, estado, id]
+      [codigo, placas, marca, modelo, conductor, anio, color, numero_serie, estado, id]
     );
 
     return res.json({ ok: true, message: "Vehículo actualizado" });
@@ -182,8 +215,85 @@ export async function crearMantenimiento(req, res) {
   }
 }
 
+export async function exportarReporteVehiculosPdf(_req, res) {
+  try {
+    await asegurarCampoConductor();
+
+    const [vehiculos] = await pool.query(`
+      SELECT id, codigo, placas, marca, modelo, conductor, anio, color, numero_serie, estado
+      FROM vehiculos
+      ORDER BY codigo ASC, id ASC
+    `);
+
+    const [mantenimientos] = await pool.query(`
+      SELECT vehiculo_id, tipo_mantenimiento, fecha_realizado, fecha_proximo, costo, proveedor, observaciones
+      FROM vehiculo_mantenimientos
+      ORDER BY fecha_realizado DESC, id DESC
+    `);
+
+    const porVehiculo = new Map();
+    mantenimientos.forEach(m => {
+      if (!porVehiculo.has(m.vehiculo_id)) porVehiculo.set(m.vehiculo_id, []);
+      porVehiculo.get(m.vehiculo_id).push(m);
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="reporte_vehiculos.pdf"`);
+
+    const doc = new PDFDocument({ margin: 36, size: "LETTER" });
+    doc.pipe(res);
+
+    doc.fontSize(18).text("Reporte de mantenimiento vehicular", { align: "center" });
+    doc.moveDown(0.3);
+    doc.fontSize(10).text(`Generado: ${formatoFecha(new Date().toISOString())}`, { align: "center" });
+    doc.moveDown(1);
+
+    if (!vehiculos.length) {
+      doc.fontSize(12).text("No hay vehículos registrados.");
+      doc.end();
+      return;
+    }
+
+    vehiculos.forEach((v, idx) => {
+      if (idx > 0) doc.moveDown(0.8);
+      if (doc.y > 690) doc.addPage();
+
+      const historial = porVehiculo.get(v.id) || [];
+      const ultimoAceite = historial.find(m => m.tipo_mantenimiento === "cambio de aceite");
+
+      doc.fontSize(13).text(`${v.codigo || ""} - ${v.marca || ""} ${v.modelo || ""}`, { underline: true });
+      doc.fontSize(10)
+        .text(`Placas: ${v.placas || "—"}    Año: ${v.anio || "—"}    Estado: ${v.estado || "—"}`)
+        .text(`Modelo: ${v.modelo || "—"}    Quien lo maneja: ${v.conductor || "—"}`)
+        .text(`Último cambio de aceite: ${ultimoAceite ? formatoFecha(ultimoAceite.fecha_realizado) : "—"}`);
+
+      doc.moveDown(0.35);
+      doc.fontSize(10).text("Historial de mantenimientos / reparaciones:");
+
+      if (!historial.length) {
+        doc.text("  - Sin historial registrado.");
+        return;
+      }
+
+      historial.forEach(m => {
+        if (doc.y > 720) doc.addPage();
+        const costo = m.costo != null ? ` | Costo: $${Number(m.costo).toFixed(2)}` : "";
+        const taller = m.proveedor ? ` | Taller: ${m.proveedor}` : "";
+        const obs = m.observaciones ? ` | Obs: ${m.observaciones}` : "";
+        doc.text(`  - ${m.tipo_mantenimiento || "Mantenimiento"} | Realizado: ${formatoFecha(m.fecha_realizado)} | Próximo: ${formatoFecha(m.fecha_proximo)}${costo}${taller}${obs}`);
+      });
+    });
+
+    doc.end();
+  } catch (err) {
+    console.error("exportarReporteVehiculosPdf:", err);
+    return res.status(500).json({ ok: false, message: "Error al generar reporte de vehículos" });
+  }
+}
+
 export async function listarAlertasVehiculos(_req, res) {
   try {
+    await asegurarCampoConductor();
     const [rows] = await pool.query(`
       SELECT
         vm.id,
@@ -195,6 +305,7 @@ export async function listarAlertasVehiculos(_req, res) {
         v.placas,
         v.marca,
         v.modelo,
+        v.conductor,
         CASE
           WHEN vm.fecha_proximo < CURDATE() THEN 'vencido'
           WHEN vm.fecha_proximo <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 'proximo'

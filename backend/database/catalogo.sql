@@ -42,3 +42,6 @@ CREATE TABLE proyectos_materiales (
   cantidad INT NOT NULL,
   fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Campo agregado para identificar quién maneja cada vehículo.
+ALTER TABLE vehiculos ADD COLUMN conductor VARCHAR(150) NULL AFTER modelo;

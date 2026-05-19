@@ -2552,6 +2552,7 @@ function renderVehiculos(lista = []) {
       <div>
         <div class="vehiculo-item-titulo">${escapeHtml(v.codigo)} · ${escapeHtml(v.marca)} ${escapeHtml(v.modelo)}</div>
         <div class="vehiculo-item-sub">Placas: ${escapeHtml(v.placas)}${v.anio ? ` · Año: ${escapeHtml(v.anio)}` : ""}${v.color ? ` · Color: ${escapeHtml(v.color)}` : ""}</div>
+        <div class="vehiculo-item-sub">Lo maneja: ${escapeHtml(v.conductor || "Sin asignar")}</div>
         <div class="vehiculo-badge">${escapeHtml(v.estado || "activo")}</div>
       </div>
       <div class="vehiculo-item-meta">
@@ -2575,6 +2576,7 @@ function llenarFormVehiculo(v) {
   form.placas.value = v.placas || "";
   form.marca.value = v.marca || "";
   form.modelo.value = v.modelo || "";
+  form.conductor.value = v.conductor || "";
   form.anio.value = v.anio || "";
   form.color.value = v.color || "";
   form.numero_serie.value = v.numero_serie || "";
@@ -2617,6 +2619,7 @@ async function guardarVehiculo(e) {
     placas: form.placas.value.trim(),
     marca: form.marca.value.trim(),
     modelo: form.modelo.value.trim(),
+    conductor: form.conductor.value.trim() || null,
     anio: form.anio.value ? Number(form.anio.value) : null,
     color: form.color.value.trim() || null,
     numero_serie: form.numero_serie.value.trim() || null,
@@ -2699,9 +2702,33 @@ async function guardarMantenimientoVehiculo(e) {
   alert("Mantenimiento registrado");
 }
 
+async function descargarReporteVehiculosPdf() {
+  const res = await apiFetch(`${API_BASE}/vehiculos/reporte/pdf`);
+  if (!res.ok) {
+    let msg = "No se pudo generar el reporte PDF";
+    try {
+      const data = await res.json();
+      msg = data.message || msg;
+    } catch {}
+    alert(msg);
+    return;
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "reporte_vehiculos.pdf";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 function initVehiculosUI() {
   document.getElementById("form-vehiculo")?.addEventListener("submit", guardarVehiculo);
   document.getElementById("btn-agregar-vehiculo")?.addEventListener("click", prepararNuevoVehiculo);
+  document.getElementById("btn-reporte-vehiculos-pdf")?.addEventListener("click", descargarReporteVehiculosPdf);
   document.getElementById("btn-limpiar-vehiculo")?.addEventListener("click", limpiarFormVehiculo);
   document.getElementById("form-mantenimiento-vehiculo")?.addEventListener("submit", guardarMantenimientoVehiculo);
 

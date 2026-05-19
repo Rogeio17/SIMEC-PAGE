@@ -534,10 +534,16 @@
             <div class="card-header">
               <h4>Vehículos registrados</h4>
               <p class="small">Selecciona una unidad para ver su historial y próximos servicios.</p>
-              <button class="btn-primary" type="button" id="btn-agregar-vehiculo">
-                <span class="material-icons">add</span>
-                Agregar nuevo vehículo
-              </button>
+              <div class="vehiculos-actions-inline">
+                <button class="btn-primary" type="button" id="btn-agregar-vehiculo">
+                  <span class="material-icons">add</span>
+                  Agregar nuevo vehículo
+                </button>
+                <button class="btn-secondary" type="button" id="btn-reporte-vehiculos-pdf">
+                  <span class="material-icons">picture_as_pdf</span>
+                  Reporte PDF
+                </button>
+              </div>
             </div>
             <div class="card-body">
               <div id="vehiculos-alertas" class="vehiculos-alertas-box"></div>
@@ -569,6 +575,10 @@
                 <div class="form-group">
                   <label>Modelo *</label>
                   <input type="text" name="modelo" required />
+                </div>
+                <div class="form-group">
+                  <label>Quien lo maneja</label>
+                  <input type="text" name="conductor" placeholder="Nombre de la persona responsable" />
                 </div>
                 <div class="form-group">
                   <label>Año</label>
