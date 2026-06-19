@@ -115,7 +115,6 @@ export async function listarMovimientosGlobal(_req, res) {
          u.email AS usuario_email,
          e.nombre AS empleado_nombre,
          e.puesto AS empleado_puesto,
-
          p.clave  AS proyecto_clave,
          p.nombre AS proyecto_nombre
        FROM movimientos mv
