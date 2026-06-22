@@ -107,12 +107,18 @@ body{ overflow:hidden; }
   box-shadow:var(--shadow-sm);
 }
 
-.logo img{
+.logo-mark{
   width:48px;
   height:48px;
-  object-fit:contain;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   border-radius:12px;
-  background:#fff;
+  background:var(--primary-dark);
+  color:#fff;
+  font-size:26px;
+  font-weight:800;
+  letter-spacing:.5px;
 }
 
 .logo-text h1{
@@ -704,7 +710,7 @@ input:disabled,select:disabled,textarea:disabled{ background:#f3f4f6; color:#98a
     z-index:10;
   }
   .logo{ padding:10px 12px; }
-  .logo img{ width:40px; height:40px; }
+  .logo-mark{ width:40px; height:40px; font-size:22px; }
   .nav{ flex-direction:row; overflow:auto; padding-bottom:4px; }
   .nav-btn{ width:auto; min-width:max-content; min-height:40px; }
   .nav-btn:hover{ transform:none; }

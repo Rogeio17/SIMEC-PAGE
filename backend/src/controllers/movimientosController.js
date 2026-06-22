@@ -122,7 +122,7 @@ export async function listarMovimientosGlobal(_req, res) {
        LEFT JOIN usuarios u ON u.id = mv.usuario_id
        LEFT JOIN empleados e ON e.id = mv.entregado_a_empleado_id
        LEFT JOIN proyectos p ON p.id = mv.proyecto_id
-       ORDER BY mv.id DESC`
+       ORDER BY mv.creado_en ASC, mv.id ASC`
     );
 
     res.json({ ok: true, movimientos: rows });
@@ -151,7 +151,7 @@ export async function listarMovimientosPorProyecto(req, res) {
        LEFT JOIN usuarios u ON u.id = mv.usuario_id
        LEFT JOIN empleados e ON e.id = mv.entregado_a_empleado_id
        WHERE mv.proyecto_id = ?
-       ORDER BY mv.id DESC`,
+       ORDER BY mv.creado_en ASC, mv.id ASC`,
       [proyectoId]
     );
 
@@ -181,7 +181,7 @@ export async function listarMovimientosPorProyectoYEtapa(req, res) {
        LEFT JOIN usuarios u ON u.id = mv.usuario_id
        LEFT JOIN empleados e ON e.id = mv.entregado_a_empleado_id
        WHERE mv.proyecto_id = ? AND mv.etapa_id = ?
-       ORDER BY mv.id DESC`,
+       ORDER BY mv.creado_en ASC, mv.id ASC`,
       [proyectoId, etapaId]
     );
 
