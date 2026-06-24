@@ -210,13 +210,14 @@ function renderMaterialesTabla(lista) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${m.codigo}</td>
-      <td>${m.nombre}${m.tipo_material === "herramienta" ? ' <span class="badge-herramienta">Herramienta</span>' : ""}</td>
+      <td>${m.nombre}${m.tipo_material === "herramienta" ? ' <span class="badge-herramienta">Herramienta</span>' : ""}${Number(m.venta_publico) === 1 ? ' <span class="badge-herramienta">Venta público</span>' : ""}</td>
       <td>${formatoCantidadMaterial(m.stock_actual, m.unidad)}</td>
       <td>${m.ubicacion || ""}</td>
       <td>${m.proveedor_nombre || ""}</td>
       <td>${m.ticket_numero || ""}</td>
       <td>${m.requiere_protocolo ? (m.protocolo_texto || "Sí") : "No"}</td>
       <td>${m.precio_unitario ?? ""}</td>
+      <td>${Number(m.venta_publico) === 1 ? "Sí" : "No"}</td>
       <td>${m.creado_por_nombre || m.creado_por_email || "-"}</td>
     `;
     tbody.appendChild(tr);
@@ -292,7 +293,8 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
     ticket_numero: form.ticket_numero.value.trim() || null,
     requiere_protocolo: requiere ? 1 : 0,
     protocolo_texto: requiere ? (form.protocolo_texto.value.trim() || null) : null,
-    precio_unitario: form.precio_unitario.value !== "" ? Number(form.precio_unitario.value) : null
+    precio_unitario: form.precio_unitario.value !== "" ? Number(form.precio_unitario.value) : null,
+    venta_publico: form.venta_publico?.value === "1" ? 1 : 0
   };
 
   const res = await apiFetch(`${API_BASE}/materiales`, {
@@ -399,6 +401,7 @@ function renderCatalogo(lista) {
 
     <div class="catalog-nombre">
         ${escapeHtml(m.nombre || "")}
+        ${Number(m.venta_publico) === 1 ? '<span class="badge-herramienta">Venta público</span>' : ""}
     </div>
 
     <div class="catalog-stock">
@@ -491,6 +494,7 @@ function renderCatalogo(lista) {
         `Proveedor: ${m.proveedor_nombre || "-"}`,
         `Ticket/Factura: ${m.ticket_numero || "-"}`,
         `Precio unitario: ${m.precio_unitario ?? "-"}`,
+        `Venta al público: ${Number(m.venta_publico) === 1 ? "Sí" : "No"}`,
         `Protocolo: ${m.requiere_protocolo ? (m.protocolo_texto || "Sí") : "No"}`,
         `Etiquetas: ${(tags.length ? tags.join(", ") : "-")}`
       ].join("\n");
@@ -637,7 +641,7 @@ function generarReporteCatalogo() {
   if (!seleccionados.length) return;
 
   const filas = [
-    ["CODIGO", "NOMBRE", "STOCK_ACTUAL", "STOCK_MINIMO", "UBICACION", "PROVEEDOR", "TICKET", "PRECIO_UNITARIO", "PROTOCOLO", "ETIQUETAS"],
+    ["CODIGO", "NOMBRE", "STOCK_ACTUAL", "STOCK_MINIMO", "UBICACION", "PROVEEDOR", "TICKET", "PRECIO_UNITARIO", "VENTA_PUBLICO", "PROTOCOLO", "ETIQUETAS"],
     ...seleccionados.map(m => [
       m.codigo || "",
       m.nombre || "",
@@ -647,6 +651,7 @@ function generarReporteCatalogo() {
       m.proveedor_nombre || "",
       m.ticket_numero || "",
       m.precio_unitario ?? "",
+      Number(m.venta_publico) === 1 ? "Sí" : "No",
       m.requiere_protocolo ? (m.protocolo_texto || "Sí") : "No",
       (Array.isArray(m.tags) && m.tags.length) ? m.tags.join(" | ") : ""
     ])
@@ -684,6 +689,7 @@ function generarReporteCatalogoPDF() {
         <td>${escapeHtml(m.proveedor_nombre || "-")}</td>
         <td>${escapeHtml(m.ticket_numero || "-")}</td>
         <td style="text-align:right;">${escapeHtml(m.precio_unitario ?? "-")}</td>
+        <td>${Number(m.venta_publico) === 1 ? "Sí" : "No"}</td>
         <td>${escapeHtml(protocolo)}</td>
         <td>${escapeHtml(tags)}</td>
       </tr>
@@ -746,6 +752,7 @@ function generarReporteCatalogoPDF() {
           <th>Proveedor</th>
           <th>Factura</th>
           <th>Precio</th>
+          <th>Venta público</th>
           <th>Protocolo</th>
           <th>Etiquetas</th>
         </tr>
@@ -1526,7 +1533,7 @@ function renderAdminMaterialesTabla(lista) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${m.codigo}</td>
-      <td>${m.nombre}${m.tipo_material === "herramienta" ? ' <span class="badge-herramienta">Herramienta</span>' : ""}</td>
+      <td>${m.nombre}${m.tipo_material === "herramienta" ? ' <span class="badge-herramienta">Herramienta</span>' : ""}${Number(m.venta_publico) === 1 ? ' <span class="badge-herramienta">Venta público</span>' : ""}</td>
       <td>${formatoCantidadMaterial(m.stock_actual, m.unidad)}</td>
       <td>${m.ubicacion || ""}</td>
       <td>
@@ -1585,6 +1592,7 @@ async function seleccionarMaterialAdmin(materialId, silencioso = false) {
     f.codigo.value = mat.codigo || "";
     if (f.unidad) f.unidad.value = (mat.unidad || "pza");
     if (f.tipo_material) f.tipo_material.value = (mat.tipo_material || "material");
+    if (f.venta_publico) f.venta_publico.value = Number(mat.venta_publico) === 1 ? "1" : "0";
     f.stock_minimo.value = mat.stock_minimo ?? 0;
     f.ubicacion.value = mat.ubicacion || "";
     
@@ -1670,6 +1678,7 @@ document.getElementById("form-editar-material-base")?.addEventListener("submit",
     codigo: (form.codigo?.value ?? "").trim(),
     unidad: (form.unidad?.value ?? "pza").trim(),
     tipo_material: (form.tipo_material?.value ?? "material").trim(),
+    venta_publico: form.venta_publico?.value === "1" ? 1 : 0,
     stock_minimo: Number(form.stock_minimo.value || 0),
     ubicacion: form.ubicacion.value.trim() || null
   };

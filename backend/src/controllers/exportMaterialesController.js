@@ -173,6 +173,7 @@ function setupMaterialesSheet(sheet) {
     { header: "Material", key: "nombre", width: 42 },
     { header: "Stock", key: "stock_actual", width: 12 },
     { header: "Ubicación", key: "ubicacion", width: 24 },
+    { header: "Venta público", key: "venta_publico", width: 16 },
   ];
 
   sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -191,7 +192,7 @@ function setupMaterialesSheet(sheet) {
 export async function exportMaterialesExcel(_req, res) {
   try {
     const [rows] = await pool.query(
-      `SELECT codigo, nombre, unidad, stock_actual, ubicacion
+      `SELECT codigo, nombre, unidad, stock_actual, ubicacion, COALESCE(venta_publico, 0) AS venta_publico
        FROM materiales
        WHERE activo = 1
        ORDER BY id DESC`
@@ -207,6 +208,7 @@ export async function exportMaterialesExcel(_req, res) {
       nombre: r.nombre,
       stock_actual: formatCantidadMaterial(r.stock_actual ?? 0, r.unidad),
       ubicacion: r.ubicacion || "-",
+      venta_publico: Number(r.venta_publico) === 1 ? "Sí" : "No",
     }));
 
     res.setHeader(
@@ -227,7 +229,7 @@ export async function exportMaterialesExcel(_req, res) {
 export async function exportMaterialesPdf(_req, res) {
   try {
     const [rows] = await pool.query(
-      `SELECT codigo, nombre, unidad, stock_actual, ubicacion
+      `SELECT codigo, nombre, unidad, stock_actual, ubicacion, COALESCE(venta_publico, 0) AS venta_publico
        FROM materiales
        WHERE activo = 1
        ORDER BY id DESC`
@@ -249,12 +251,14 @@ export async function exportMaterialesPdf(_req, res) {
         { label: "Material", w: 52 },
         { label: "Stock", w: 15, align: "right" },
         { label: "Ubicación", w: 15 },
+        { label: "Venta público", w: 15 },
       ],
       rows.map(r => [
         r.codigo,
         r.nombre,
         formatCantidadMaterial(r.stock_actual ?? 0, r.unidad),
         r.ubicacion || "-",
+        Number(r.venta_publico) === 1 ? "Sí" : "No",
       ])
     );
 

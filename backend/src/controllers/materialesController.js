@@ -29,6 +29,7 @@ export async function listarMateriales(req, res) {
          m.id, m.codigo, m.nombre, m.unidad,
          COALESCE(m.tipo_material, 'material') AS tipo_material,
          m.stock_actual, m.stock_minimo, m.ubicacion,
+         COALESCE(m.venta_publico, 0) AS venta_publico,
          m.activo, m.creado_en,
          m.proveedor_id,
          p.nombre_comercial AS proveedor_nombre,
@@ -93,6 +94,7 @@ export async function listarCatalogoMateriales(req, res) {
       `SELECT
          m.id, m.codigo, m.nombre,
          m.stock_actual, m.stock_minimo, m.ubicacion,
+         COALESCE(m.venta_publico, 0) AS venta_publico,
          m.proveedor_id,
          p.nombre_comercial AS proveedor_nombre,
          m.ticket_numero,
@@ -216,6 +218,7 @@ export async function crearMaterial(req, res) {
       requiere_protocolo = 0,
       protocolo_texto = null,
       precio_unitario = null,
+      venta_publico = 0,
     } = req.body;
 
     if (!nombre || !String(nombre).trim()) {
@@ -248,10 +251,10 @@ export async function crearMaterial(req, res) {
     const [ins] = await conn.query(
       `INSERT INTO materiales
         (codigo, nombre, unidad, tipo_material, stock_actual, stock_minimo, ubicacion, activo, creado_en,
-         proveedor_id, ticket_numero, requiere_protocolo, protocolo_texto, precio_unitario,
+         proveedor_id, ticket_numero, requiere_protocolo, protocolo_texto, precio_unitario, venta_publico,
          creado_por_usuario_id, actualizado_por_usuario_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(),
-               ?, ?, ?, ?, ?,
+               ?, ?, ?, ?, ?, ?,
                ?, ?)`,
       [
         codigoFinal,
@@ -268,6 +271,7 @@ export async function crearMaterial(req, res) {
         (precio_unitario !== "" && precio_unitario !== null && precio_unitario !== undefined)
           ? Number(precio_unitario)
           : null,
+        Number(venta_publico) === 1 ? 1 : 0,
         req.user?.id ?? null,
         req.user?.id ?? null,
       ]
@@ -326,6 +330,7 @@ export async function actualizarMaterial(req, res) {
       nombre,
       unidad,
       tipo_material,
+      venta_publico,
       stock_minimo = 0,
       ubicacion = null,
     } = req.body;
@@ -373,6 +378,10 @@ export async function actualizarMaterial(req, res) {
     if (tipo_material !== undefined) {
       sets.push("tipo_material = ?");
       vals.push(normalizarTipoMaterial(tipo_material));
+    }
+    if (venta_publico !== undefined) {
+      sets.push("venta_publico = ?");
+      vals.push(Number(venta_publico) === 1 ? 1 : 0);
     }
 
     vals.push(id);

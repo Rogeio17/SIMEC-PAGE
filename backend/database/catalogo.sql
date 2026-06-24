@@ -45,3 +45,6 @@ CREATE TABLE proyectos_materiales (
 
 -- Campo agregado para identificar quién maneja cada vehículo.
 ALTER TABLE vehiculos ADD COLUMN conductor VARCHAR(150) NULL AFTER modelo;
+
+-- Campo para identificar materiales disponibles para venta al público.
+ALTER TABLE materiales ADD COLUMN venta_publico TINYINT(1) DEFAULT 0 AFTER ubicacion;
