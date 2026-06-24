@@ -782,6 +782,13 @@ document.getElementById("btn-catalogo-limpiar")?.addEventListener("click", () =>
   renderCatalogo(catalogoCache);
 });
 
+
+document.getElementById("btn-catalogo-seleccionar-todo")?.addEventListener("click", () => {
+  catalogoCache.forEach(m => seleccionCatalogo.add(m.id));
+  actualizarBotonReporteCatalogo();
+  renderCatalogo(catalogoCache);
+});
+
 document.getElementById("btn-catalogo-reporte")?.addEventListener("click", generarReporteCatalogo);
 document.getElementById("btn-catalogo-reporte-pdf")?.addEventListener("click", generarReporteCatalogoPDF);
 
