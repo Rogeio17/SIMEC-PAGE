@@ -294,7 +294,11 @@ document.getElementById("form-material")?.addEventListener("submit", async (e) =
     requiere_protocolo: requiere ? 1 : 0,
     protocolo_texto: requiere ? (form.protocolo_texto.value.trim() || null) : null,
     precio_unitario: form.precio_unitario.value !== "" ? Number(form.precio_unitario.value) : null,
-    venta_publico: form.venta_publico?.value === "1" ? 1 : 0
+    venta_publico: form.venta_publico?.value === "1" ? 1 : 0,
+    tags: (form.tags?.value || "")
+      .split(",")
+      .map(t => t.trim())
+      .filter(Boolean)
   };
 
   const res = await apiFetch(`${API_BASE}/materiales`, {
@@ -329,6 +333,7 @@ function getCatalogoFiltros() {
     tag: (document.getElementById("catalogo-filtro-tag")?.value || "").trim(),
     proveedor_id: (document.getElementById("catalogo-filtro-proveedor")?.value || "").trim(),
     stock: (document.getElementById("catalogo-filtro-stock")?.value || "").trim(),
+    venta: (document.getElementById("catalogo-filtro-venta")?.value || "").trim(),
   };
 }
 
@@ -600,6 +605,7 @@ async function cargarCatalogo() {
   if (f.tag) params.set("tag", f.tag);
   if (f.proveedor_id) params.set("proveedor_id", f.proveedor_id);
   if (f.stock) params.set("stock", f.stock);
+  if (f.venta) params.set("venta", f.venta);
 
   const res = await apiFetch(`${API_BASE}/materiales/catalogo?${params.toString()}`);
   const data = await res.json().catch(() => ({}));
@@ -782,6 +788,7 @@ document.getElementById("catalogo-buscar")?.addEventListener("input", () => {
 document.getElementById("catalogo-filtro-tag")?.addEventListener("change", cargarCatalogo);
 document.getElementById("catalogo-filtro-proveedor")?.addEventListener("change", cargarCatalogo);
 document.getElementById("catalogo-filtro-stock")?.addEventListener("change", cargarCatalogo);
+document.getElementById("catalogo-filtro-venta")?.addEventListener("change", cargarCatalogo);
 
 document.getElementById("btn-catalogo-limpiar")?.addEventListener("click", () => {
   seleccionCatalogo.clear();

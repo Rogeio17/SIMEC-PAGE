@@ -110,7 +110,6 @@ function drawSimpleTable(doc, columns, rows) {
         lineBreak: false,
         ellipsis: true,
       });
-      // PDFKit mueve doc.y después de text(); lo regresamos para que no descuadre columnas.
       doc.y = headerY;
       x += colW[i];
     });
@@ -129,7 +128,6 @@ function drawSimpleTable(doc, columns, rows) {
 
     const rowY = doc.y;
 
-    // Renglón completo, tipo hoja con rayas.
     doc
       .rect(left, rowY, width, rowH)
       .lineWidth(0.35)
@@ -138,7 +136,6 @@ function drawSimpleTable(doc, columns, rows) {
 
     let xx = left;
     r.forEach((val, i) => {
-      // Separadores verticales suaves para que todo quede dentro de su columna.
       if (i > 0) {
         doc
           .moveTo(xx, rowY)
@@ -235,7 +232,7 @@ export async function exportMaterialesPdf(_req, res) {
        ORDER BY id DESC`
     );
 
-    const doc = new PDFDocument({ margin: 40 });
+    const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 35 });
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", "attachment; filename=materiales.pdf");
     doc.pipe(res);
@@ -247,11 +244,11 @@ export async function exportMaterialesPdf(_req, res) {
     drawSimpleTable(
       doc,
       [
-        { label: "Código", w: 18 },
-        { label: "Material", w: 52 },
-        { label: "Stock", w: 15, align: "right" },
-        { label: "Ubicación", w: 15 },
-        { label: "Venta público", w: 15 },
+        { label: "Código", w: 16 },
+        { label: "Material", w: 50 },
+        { label: "Stock", w: 14, align: "right" },
+        { label: "Ubicación", w: 18 },
+        { label: "Venta público", w: 14 },
       ],
       rows.map(r => [
         r.codigo,

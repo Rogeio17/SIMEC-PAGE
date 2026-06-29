@@ -13,6 +13,66 @@ function normalizarTipoMaterial(v) {
   return TIPOS_MATERIAL_VALIDOS.has(x) ? x : "material";
 }
 
+let catalogoSchemaReady = false;
+
+async function asegurarCatalogoSchema(conn = pool) {
+  if (catalogoSchemaReady) return;
+
+  try {
+    await conn.query(`ALTER TABLE materiales ADD COLUMN venta_publico TINYINT(1) DEFAULT 0 AFTER ubicacion`);
+  } catch (err) {
+    if (err?.code !== "ER_DUP_FIELDNAME") throw err;
+  }
+
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS tags (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      nombre VARCHAR(100) NOT NULL UNIQUE,
+      creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS material_tags (
+      material_id INT NOT NULL,
+      tag_id INT NOT NULL,
+      creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (material_id, tag_id),
+      FOREIGN KEY (material_id) REFERENCES materiales(id) ON DELETE CASCADE,
+      FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+    )
+  `);
+
+  catalogoSchemaReady = true;
+}
+
+function normalizarTagsEntrada(tags) {
+  if (Array.isArray(tags)) return tags.map(t => String(t || "").trim()).filter(Boolean);
+  return String(tags || "")
+    .split(",")
+    .map(t => t.trim())
+    .filter(Boolean);
+}
+
+async function guardarTagsMaterial(conn, materialId, tags) {
+  const lista = [...new Set(normalizarTagsEntrada(tags).map(t => t.slice(0, 100)))];
+  for (const tag of lista) {
+    let tagId;
+    const [t] = await conn.query("SELECT id FROM tags WHERE LOWER(nombre) = LOWER(?) LIMIT 1", [tag]);
+    if (t.length) {
+      tagId = t[0].id;
+    } else {
+      const [insTag] = await conn.query("INSERT INTO tags (nombre) VALUES (?)", [tag]);
+      tagId = insTag.insertId;
+    }
+
+    await conn.query(
+      "INSERT IGNORE INTO material_tags (material_id, tag_id) VALUES (?, ?)",
+      [materialId, tagId]
+    );
+  }
+}
+
 export async function listarMateriales(req, res) {
   try {
     const tipoMaterial = String(req.query?.tipo_material || "").trim().toLowerCase();
@@ -61,10 +121,12 @@ export async function listarMateriales(req, res) {
 
 export async function listarCatalogoMateriales(req, res) {
   try {
+    await asegurarCatalogoSchema();
     const search = String(req.query.search || "").trim().toLowerCase();
     const tag = String(req.query.tag || "").trim().toLowerCase();
     const proveedorId = req.query.proveedor_id ? Number(req.query.proveedor_id) : null;
-    const stock = String(req.query.stock || "").trim().toLowerCase(); 
+    const stock = String(req.query.stock || "").trim().toLowerCase();
+    const venta = String(req.query.venta || "").trim().toLowerCase(); 
 
     const where = ["m.activo = 1"];
     const params = [];
@@ -76,6 +138,8 @@ export async function listarCatalogoMateriales(req, res) {
 
     if (stock === "con") where.push("m.stock_actual > 0");
     if (stock === "sin") where.push("(m.stock_actual IS NULL OR m.stock_actual <= 0)");
+    if (venta === "si") where.push("COALESCE(m.venta_publico, 0) = 1");
+    if (venta === "no") where.push("COALESCE(m.venta_publico, 0) = 0");
 
     if (search) {
       where.push(
@@ -92,7 +156,7 @@ export async function listarCatalogoMateriales(req, res) {
 
     const [rows] = await pool.query(
       `SELECT
-         m.id, m.codigo, m.nombre,
+         m.id, m.codigo, m.nombre, m.unidad,
          m.stock_actual, m.stock_minimo, m.ubicacion,
          COALESCE(m.venta_publico, 0) AS venta_publico,
          m.proveedor_id,
@@ -135,6 +199,7 @@ export async function agregarTagMaterial(req, res) {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+    await asegurarCatalogoSchema(conn);
 
     const materialId = Number(req.params.id);
     const tag = String(req.body?.tag || "").trim();
@@ -155,19 +220,7 @@ export async function agregarTagMaterial(req, res) {
       return res.status(404).json({ ok: false, message: "Material no encontrado" });
     }
     
-    let tagId;
-    const [t] = await conn.query("SELECT id FROM tags WHERE LOWER(nombre) = LOWER(?) LIMIT 1", [tag]);
-    if (t.length) {
-      tagId = t[0].id;
-    } else {
-      const [ins] = await conn.query("INSERT INTO tags (nombre) VALUES (?)", [tag]);
-      tagId = ins.insertId;
-    }
-
-    await conn.query(
-      "INSERT IGNORE INTO material_tags (material_id, tag_id) VALUES (?, ?)",
-      [materialId, tagId]
-    );
+    await guardarTagsMaterial(conn, materialId, [tag]);
 
     await conn.commit();
     res.json({ ok: true, message: "Etiqueta agregada" });
@@ -182,6 +235,7 @@ export async function agregarTagMaterial(req, res) {
 
 export async function quitarTagMaterial(req, res) {
   try {
+    await asegurarCatalogoSchema();
     const materialId = Number(req.params.id);
     const tagId = Number(req.params.tagId);
     if (!Number.isFinite(materialId) || !Number.isFinite(tagId)) {
@@ -204,6 +258,7 @@ export async function crearMaterial(req, res) {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+    await asegurarCatalogoSchema(conn);
 
     const {
       codigo,
@@ -219,6 +274,7 @@ export async function crearMaterial(req, res) {
       protocolo_texto = null,
       precio_unitario = null,
       venta_publico = 0,
+      tags = [],
     } = req.body;
 
     if (!nombre || !String(nombre).trim()) {
@@ -278,6 +334,8 @@ export async function crearMaterial(req, res) {
     );
 
     const materialId = ins.insertId;
+
+    await guardarTagsMaterial(conn, materialId, tags);
 
     if (stockInicialNum > 0) {
       await conn.query(

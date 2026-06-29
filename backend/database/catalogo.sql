@@ -48,3 +48,28 @@ ALTER TABLE vehiculos ADD COLUMN conductor VARCHAR(150) NULL AFTER modelo;
 
 -- Campo para identificar materiales disponibles para venta al público.
 ALTER TABLE materiales ADD COLUMN venta_publico TINYINT(1) DEFAULT 0 AFTER ubicacion;
+
+
+-- Tablas para etiquetas de materiales en catálogo.
+CREATE TABLE IF NOT EXISTS tags (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(100) NOT NULL UNIQUE,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS material_tags (
+  material_id INT NOT NULL,
+  tag_id INT NOT NULL,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (material_id, tag_id),
+  FOREIGN KEY (material_id) REFERENCES materiales(id) ON DELETE CASCADE,
+  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS material_tags (
+  material_id INT NOT NULL,
+  tag_id INT NOT NULL,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (material_id, tag_id),
+  FOREIGN KEY (material_id) REFERENCES materiales(id) ON DELETE CASCADE,
+  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
