@@ -203,8 +203,8 @@
 
           <div class="form-group">
             <label>Etiquetas</label>
-            <input type="text" name="tags" placeholder="Ej: venta, subterráneo, iluminación" />
-            <p class="small">Separa varias etiquetas con coma.</p>
+            <input type="text" name="tags" list="catalogo-tags-list" placeholder="Ej: venta, subterráneo, iluminación" />
+            <p class="small">Puedes escribir una nueva etiqueta o seleccionar una existente. Separa varias con coma.</p>
           </div>
 
           <div class="form-group">
@@ -313,9 +313,7 @@
 
         <div class="form-group">
           <label>Etiqueta</label>
-          <select id="catalogo-filtro-tag">
-            <option value="">Todas</option>
-          </select>
+          <input type="text" id="catalogo-filtro-tag" list="catalogo-tags-list" placeholder="Todas" />
         </div>
 
         <div class="form-group">
@@ -1378,6 +1376,7 @@
 
 
 
+  <datalist id="catalogo-tags-list"></datalist>
   <script src="script.js"></script>
 </body>
 </html>

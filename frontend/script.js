@@ -9,6 +9,15 @@ function normalizarUnidadMaterial(unidad) {
   return "pza";
 }
 
+
+function debounce(fn, delay = 300) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
 function formatoCantidadMaterial(cantidad, unidad) {
   const u = normalizarUnidadMaterial(unidad);
   const n = Number(cantidad);
@@ -451,6 +460,11 @@ function renderCatalogo(lista) {
         esAdmin()
         ? `<span class="chip chip-add">
             <button class="btn-chip-add" data-mid="${m.id}">+ Etiqueta</button>
+          </span>
+          <span class="catalog-tag-editor" data-mid="${m.id}" style="display:none;">
+            <input type="text" class="input-tag-catalogo" list="catalogo-tags-list" placeholder="Buscar o crear etiqueta" />
+            <button class="btn-secondary btn-tag-guardar" data-mid="${m.id}">Guardar</button>
+            <button class="btn-secondary btn-tag-cancelar" type="button">Cancelar</button>
           </span>`
         : ""
       }
@@ -509,19 +523,42 @@ function renderCatalogo(lista) {
     });
 
 
-    card.querySelector(".btn-chip-add")?.addEventListener("click", async (ev) => {
+    card.querySelector(".btn-chip-add")?.addEventListener("click", (ev) => {
 
       if (!esAdmin()) return alert("Solo admin puede crear etiquetas.");
 
-      const mid = Number(ev.currentTarget.dataset.mid);
+      const editor = card.querySelector(`.catalog-tag-editor[data-mid="${ev.currentTarget.dataset.mid}"]`);
+      const input = editor?.querySelector(".input-tag-catalogo");
 
-      const tag = prompt("Escribe la etiqueta:");
+      if (!editor || !input) return;
 
-      if (!tag || !tag.trim()) return;
+      editor.style.display = "inline-flex";
+      ev.currentTarget.style.display = "none";
+      input.value = "";
+      input.focus();
+
+    });
+
+    card.querySelector(".btn-tag-cancelar")?.addEventListener("click", (ev) => {
+      const editor = ev.currentTarget.closest(".catalog-tag-editor");
+      const btnAdd = card.querySelector(".btn-chip-add");
+      if (editor) editor.style.display = "none";
+      if (btnAdd) btnAdd.style.display = "inline-flex";
+    });
+
+    async function guardarEtiquetaCatalogo(btn) {
+      if (!esAdmin()) return alert("Solo admin puede crear etiquetas.");
+
+      const editor = btn.closest(".catalog-tag-editor");
+      const input = editor?.querySelector(".input-tag-catalogo");
+      const mid = Number(btn.dataset.mid);
+      const tag = (input?.value || "").trim();
+
+      if (!tag) return alert("Escribe o selecciona una etiqueta.");
 
       const res = await apiFetch(`${API_BASE}/materiales/${mid}/tags`,{
         method:"POST",
-        body:JSON.stringify({tag:tag.trim()})
+        body:JSON.stringify({tag})
       });
 
       const data = await res.json().catch(()=>({}));
@@ -530,7 +567,17 @@ function renderCatalogo(lista) {
         return alert(data.message || "Error al agregar etiqueta");
 
       await cargarCatalogo();
+    }
 
+    card.querySelector(".btn-tag-guardar")?.addEventListener("click", async (ev) => {
+      await guardarEtiquetaCatalogo(ev.currentTarget);
+    });
+
+    card.querySelector(".input-tag-catalogo")?.addEventListener("keydown", async (ev) => {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        await guardarEtiquetaCatalogo(card.querySelector(".btn-tag-guardar"));
+      }
     });
 
 
@@ -566,17 +613,28 @@ function renderCatalogo(lista) {
 }
 
 function poblarSelectCatalogoTags(tags) {
-  const sel = document.getElementById("catalogo-filtro-tag");
-  if (!sel) return;
-  const actual = sel.value;
-  sel.innerHTML = `<option value="">Todas</option>`;
-  (tags || []).forEach(t => {
-    const opt = document.createElement("option");
-    opt.value = t.nombre;
-    opt.textContent = t.nombre;
-    sel.appendChild(opt);
-  });
-  if ([...sel.options].some(o => o.value === actual)) sel.value = actual;
+  const filtro = document.getElementById("catalogo-filtro-tag");
+  const lista = document.getElementById("catalogo-tags-list");
+  const actual = filtro ? filtro.value : "";
+
+  if (lista) {
+    lista.innerHTML = "";
+    (tags || []).forEach(t => {
+      const opt = document.createElement("option");
+      opt.value = t.nombre;
+      lista.appendChild(opt);
+    });
+  }
+
+  if (filtro) filtro.value = actual;
+}
+
+async function cargarTagsDisponiblesMateriales() {
+  const res = await apiFetch(`${API_BASE}/materiales/catalogo`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) return;
+  catalogoTagsDisponibles = data.tags || [];
+  poblarSelectCatalogoTags(catalogoTagsDisponibles);
 }
 
 async function poblarSelectCatalogoProveedores() {
@@ -786,6 +844,7 @@ document.getElementById("catalogo-buscar")?.addEventListener("input", () => {
   window.__catTimer = setTimeout(cargarCatalogo, 250);
 });
 document.getElementById("catalogo-filtro-tag")?.addEventListener("change", cargarCatalogo);
+document.getElementById("catalogo-filtro-tag")?.addEventListener("input", debounce(cargarCatalogo, 350));
 document.getElementById("catalogo-filtro-proveedor")?.addEventListener("change", cargarCatalogo);
 document.getElementById("catalogo-filtro-stock")?.addEventListener("change", cargarCatalogo);
 document.getElementById("catalogo-filtro-venta")?.addEventListener("change", cargarCatalogo);
@@ -2782,6 +2841,7 @@ function initVehiculosUI() {
   cargarMaterialesEnSelectProyecto();
   cargarProveedores();
   cargarProveedoresSelects();
+  cargarTagsDisponiblesMateriales();
   cargarVehiculos();
 
   setAdminPanelVisible(false);
